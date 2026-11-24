@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ru" data-type="software" data-radius="soft" data-ground="sand" data-buttons="tonal" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Наука побеждать: ИИ-наставник для руководителей</title>
+<meta name="description" content="Опишите рабочую ситуацию и получите план действий с исполнителями и сроками. Для мастера участка и для директора, 1 500 ₽ в месяц.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Наука побеждать: ИИ-наставник для руководителей">
+<meta property="og:description" content="План действий для руководителя по методу Суворова: ситуация, два-три вопроса, шаги и сроки.">
+<meta property="og:image" content="share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#f4eee2">
+<!-- <link rel="canonical" href="https://[домен клиента]/"> -->
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/landing/assets/system.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/cards.css">
+<link rel="stylesheet" href="/static/landing/assets/motion/motion.css">
+<link rel="stylesheet" href="/static/landing/assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="/static/landing/assets/layout/layout.css">
+<link rel="stylesheet" href="/static/landing/assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #f4eee2; --p-surface: #fffdf8; --p-ink: #12201a; --p-muted: #46463e;
+  --p-accent: #a8142f; --p-accent-ink: #f4eee2; --p-action: #a8142f; --p-action-ink: #f4eee2;
+  --p-inv-bg: #12201a; --p-inv-surface: #1f2c25; --p-inv-ink: #f4eee2; --p-inv-muted: #96998f;
+  --p-inv-accent: #f4eee2; --p-inv-accent-ink: #12201a; --p-inv-action: #f4eee2; --p-inv-action-ink: #12201a;
+  --font-display: "Onest", system-ui, sans-serif;
+  --font-text: "Onest", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.035em;
+  --display-tracking-xl: -0.04em;
+}
+</style>
+<link rel="stylesheet" href="/static/landing/assets/ui/base.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/window/fragment.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/chat/fragment.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/voice/fragment.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/notify/fragment.css">
+<link rel="stylesheet" href="/static/landing/assets/ui/checklist/fragment.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="/static/landing/assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="/static/landing/assets/moments/moments.js">
+<link rel="modulepreload" href="/static/landing/assets/moments/lib.js">
+<link rel="modulepreload" href="/static/landing/assets/moments/word-highlight/moment.js">
+<style>
+  /* the hero window: the drawn exchange (layout/demo.css pieces, made light for this page) */
+  .hero__window { background:
+    radial-gradient(120% 60% at 70% 118%, #7e1a2c 0 40%, transparent 41%),
+    radial-gradient(90% 50% at 10% 108%, #2c3d33 0 42%, transparent 43%),
+    radial-gradient(80% 40% at 60% 92%, #c9a45c 0 40%, transparent 41%),
+    linear-gradient(#a8142f, #c95a5f 70%, #e9cfa7); }
+  .d-win { background: #fffdf8; color: #12201a; border-radius: 12px; overflow: hidden; font: 400 14px/1.4 var(--font-text); box-shadow: 0 0 0 1px rgb(18 32 26 / .08), 0 24px 60px -28px rgb(18 32 26 / .5); text-align: left; }
+  .d-win__bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-bottom: 1px solid rgb(18 32 26 / .08); font-size: 13px; color: #5a5a50; }
+  .d-win__bar b { color: #12201a; font-weight: 500; } .d-win__bar .sp { flex: 1; }
+  .d-win__dots { display: flex; gap: 6px; } .d-win__dots i { width: 10px; height: 10px; border-radius: 50%; background: #e2dacb; }
+  .d-win__body { display: grid; grid-template-columns: 250px 1fr; min-height: 420px; }
+  .inbox { border-right: 1px solid rgb(18 32 26 / .08); padding: 10px; display: grid; align-content: start; gap: 2px; }
+  .inbox .q { height: 34px; margin-bottom: 6px; border-radius: 9px; background: rgb(18 32 26 / .05); display: flex; align-items: center; padding: 0 10px; color: #5a5a50; font-size: 13px; }
+  .inbox .t { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; padding: 9px 10px; border-radius: 9px; font-size: 13px; }
+  .inbox .t.is-on { background: rgb(168 20 47 / .08); }
+  .inbox .t b { font-weight: 500; color: #12201a; } .inbox .t time { color: #5a5a50; font-size: 13px; }
+  .inbox .t span { grid-column: 1 / -1; color: #5a5a50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .convo { display: grid; min-width: 0; align-content: start; }
+  .d-chat { display: grid; gap: 8px; align-content: start; padding: 14px 18px; font-size: 14px; }
+  .d-msg { max-width: 78%; padding: 10px 14px; border-radius: 16px; line-height: 1.45; }
+  .d-msg--me { justify-self: end; background: #ebe3d3; color: #12201a; border-bottom-right-radius: 6px; }
+  .d-msg--bot { max-width: 86%; background: #a8142f; color: #fffdf8; border-bottom-left-radius: 6px; }
+  .d-msg--bot small { display: inline; margin: 0 0 0 8px; font-size: 13px; opacity: .8; white-space: nowrap; }
+  .d-tool { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a5a50; }
+  .d-tool::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; }
+  .acts { display: flex; gap: 8px; } .acts span { height: 30px; padding: 0 12px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 500; background: #12201a; color: #f4eee2; }
+  .acts span + span { background: rgb(18 32 26 / .07); color: #12201a; }
+  @media (max-width: 639px) { .d-win__body { grid-template-columns: 1fr; } .inbox { display: none; } .hero__window .d-chat { font-size: 13px; padding: 12px 14px; } .hero__window .d-msg--bot small, .hero__window .d-tool, .hero__window .acts, .hero__window .d-win__bar .sp ~ span { display: none; } }
+  .hero__window .loop-pause:focus-visible { outline-color: #fffdf8; }
+
+  /* app-frame (sections-library.md, app-frame: the whole recipe) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+  }
+
+  /* the steps: one panel height for the group */
+  #how .panel { --p-h: 336px; }
+  @media (max-width: 639px) { #how .panel { --p-h: 200px; } }
+  /* the client's imperial carmine as the page's one lit ground (UI frames, the hero window, the closing slab) */
+  html[data-ground="sand"] { --ground-bg: #a8142f; --ground-surface: #b92a40; --ground-ink: #fffdf8; --ground-muted: #f3d9d3; --ground-accent: #e9cf97; }
+  html .footer.closing.footer--statement { --action: #f4eee2; --action-ink: #a8142f; }
+  .hero h1 .mark { width: .8em; height: .8em; vertical-align: -.06em; color: var(--action); }
+  /* the plan's sources line in the chat: Russian words are longer */
+  .ui-chat__src { white-space: nowrap; }
+</style>
+</head>
+<body>
+<!-- type: software
+     deal: hero centred, nav nav-mega, close close-type, footer footer-statement, rhythm space, buttons tonal, mark arc,
+           palette: the client's own colours (start.mjs brand: ivory ground, green-black ink, imperial carmine accent; the dealt
+           lunar-grey-bronze set aside for the client's colours), type onest (the first three dealt pairings have no Cyrillic),
+           effect painterly-landscape in the hero window, grounds none
+     moments: word-highlight in #method (its own statement section) -->
+
+<header class="nav">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">К содержанию</a>
+    <a class="nav__logo" href="#top"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
+    <nav class="nav__links" aria-label="Основное меню">
+      <div class="nav__item">
+        <a class="nav__link" href="#plan">Продукт <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">Разбор</p>
+              <a href="#plan">План действий<span>Шаги, люди и сроки</span></a>
+              <a href="#how">Три шага<span>От ситуации до плана</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">Команда</p>
+              <a href="#shtab">Штаб<span>Общие задачи и сроки</span></a>
+              <a href="#method">Метод<span>Глазомер, быстрота, натиск</span></a>
+            </div>
+            <a class="menu-card span-3 start-10" href="#shtab">
+              <div class="panel"><div class="stage stage--fade-br"><div class="at-corner" style="--ax:24px;--ay:24px">
+                <div class="ui ui-notify" data-ui="notify">
+                  <ul class="ui-notify__list" data-notify-list>
+                    <li class="ui-note"><span class="ui-agent ui-note__av" aria-hidden="true"></span><span class="ui-note__text"><span class="ui-note__title">Срок спецификации — завтра<time>сейчас</time></span><span class="ui-note__body">Миронов, штаб «Линия 2»</span></span></li>
+                  </ul>
+                </div>
+              </div></div></div>
+              <span class="t-card">Штаб для команды</span>
+              <span class="t-small muted">Задачи из плана — всем сразу</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#shtab">Штаб</a></div>
+      <div class="nav__item"><a class="nav__link" href="#price">Цена</a></div>
+      <div class="nav__item"><a class="nav__link" href="#faq">Вопросы</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="btn btn--primary" href="/login">Начать разбор</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Меню">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text">
+      <div class="hero__c">
+        <a class="pill" href="#method"><span>По методу А. В. Суворова</span><span class="muted">Веб, MAX и Telegram</span></a>
+        <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ-наставник для руководителей</h1>
+        <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. 1 500 ₽ в месяц.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="/login">Начать разбор</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
+      </div>
+      <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="7" role="img" aria-label="Наставник отвечает руководителю планом из трёх шагов на 21 день">
+        <div class="ly-piece d-win" aria-hidden="true">
+          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Иван Петров</b> · начальник отдела</span><span class="sp"></span><span>Веб · MAX</span></div>
+          <div class="d-win__body">
+            <div class="inbox">
+              <div class="q">Поиск</div>
+              <div class="t is-on"><b>Два отдела срывают проект</b><time>10:42</time><span>До сдачи три недели</span></div>
+              <div class="t"><b>Разговор о повышении</b><time>вт</time><span>План готов · 3 шага</span></div>
+              <div class="t"><b>Бюджет на I квартал</b><time>18.11</time><span>План готов · 4 шага</span></div>
+            </div>
+            <div class="convo">
+              <div class="d-chat" data-ly-steps="900">
+                <div class="d-msg d-msg--me">Закупки и производство срывают общий проект и винят друг друга. До сдачи три недели.</div>
+                <div class="d-tool" data-step>Уточняю, кто решает спор и чем грозит опоздание</div>
+                <div class="d-msg d-msg--bot" data-step>Завтра — общий список задач. К 27 ноября — спецификация. До сдачи — сбор по 15 минут.<small>План · 3 шага</small></div>
+                <div class="acts" data-step><span>Отправить в штаб</span><span>Изменить</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="plan" aria-labelledby="plan-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="plan-h" class="span-5">Ситуации и планы в одном окне</h2>
+        <p class="span-6 start-7 muted">Слева все ваши ситуации, справа разговор: наставник уточняет обстановку и пишет план с исполнителями и сроками. <a class="link" href="#how">Посмотреть три шага разбора</a></p>
+      </div>
+      <div class="ui app fill" role="img" aria-label="Окно наставника: список ситуаций руководителя и открытый разговор с планом" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="ui ui-panel ui-win" data-ui="window" data-open="Разбор" data-work="Думает" data-done="План готов">
+            <div class="ui-win__bar">
+              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ui-win__crumb">Наставник <i>/</i> <b>Ситуации</b></span>
+              <span class="ui-spacer"></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Поиск</span><span class="ui-kbd">/</span></span>
+            </div>
+            <div class="ui-win__body">
+              <nav class="ui-win__side" aria-hidden="true">
+                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/><path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/></svg>Мои<em>9</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="2.5"/><path d="M3.5 13.5c.6-2.3 2.4-3.5 4.5-3.5s3.9 1.2 4.5 3.5"/></svg>Штаб<em>3</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>Сроки<em>2</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>Готово</span>
+              </nav>
+              <div class="ui-win__main">
+                <div class="ui-win__cols" aria-hidden="true"><span>Ситуация</span><span>Суть</span><span>Статус</span><span>Когда</span></div>
+                <ul class="ui-win__rows">
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">ИП</span><span class="ui-win__who">Срыв общего проекта</span><span class="ui-win__sub">Два отдела, 21 день</span><span class="ui-win__st" data-st>Разбор</span><span class="ui-win__age">2 мин</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">ИП</span><span class="ui-win__who">Новый заместитель</span><span class="ui-win__sub">Ввести в дело за месяц</span><span class="ui-win__st" data-st>Разбор</span><span class="ui-win__age">1 ч</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">ИП</span><span class="ui-win__who">Разговор о повышении</span><span class="ui-win__sub">Сильный инженер просит роль</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">вт</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">ИП</span><span class="ui-win__who">Бюджет на I квартал</span><span class="ui-win__sub">Сократить на 8%</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">18.11</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">ИП</span><span class="ui-win__who">Опоздания во второй смене</span><span class="ui-win__sub">Двое, уже месяц</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">14.11</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">ИП</span><span class="ui-win__who">Конфликт двух мастеров</span><span class="ui-win__sub">Делят станок</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">11.11</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">ИП</span><span class="ui-win__who">Отчёт для директора</span><span class="ui-win__sub">Три главных риска</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">07.11</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">ИП</span><span class="ui-win__who">Отпуск в декабре</span><span class="ui-win__sub">Кто заменит на линии</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">03.11</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">ИП</span><span class="ui-win__who">Новый поставщик</span><span class="ui-win__sub">Сравнить три предложения</span><span class="ui-win__st is-done" data-st>План готов</span><span class="ui-win__age">29.10</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open" data-ui-loop>
+          <div class="ui ui-panel ui-chat" data-ui="chat">
+            <div class="ui-head">
+              <span class="ui-agent" aria-hidden="true"></span>
+              <div class="ui-title">Срыв общего проекта</div>
+              <span class="ui-chat__online">Наставник</span>
+              <span class="ui-spacer"></span>
+            </div>
+            <div class="ui-chat__body">
+              <div class="ui-chat__day">Сегодня, 10:42</div>
+              <div class="ui-msg ui-msg--me" data-chat-q>
+                <span class="ui-msg__text">Директор в командировке до 1 декабря. За опоздание — штраф по договору.</span>
+              </div>
+              <div class="ui-msg ui-msg--bot" data-chat-a>
+                <span class="ui-agent ui-msg__av" aria-hidden="true"></span>
+                <span class="ui-msg__col">
+                  <span class="ui-chat__answer">Ждать директора — потерять неделю. Соберите оба отдела в один штаб: <b>общий список задач завтра</b>, спецификация закупкам к 27 ноября, сбор по 15 минут до сдачи.</span>
+                  <span class="ui-chat__srcs">
+                    <span class="ui-chat__src"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>«Наука побеждать»</span>
+                    <span class="ui-chat__src"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>План · 3 шага</span>
+                  </span>
+                </span>
+              </div>
+              <div class="ui-msg ui-msg--me">
+                <span class="ui-msg__text">Отправь план в штаб.</span>
+              </div>
+            </div>
+            <div class="ui-chat__input">
+              <span class="ui-chat__ph">Опишите ситуацию</span>
+              <span class="ui-chat__send" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" style="--hm: 2" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="how-h">Разбор ситуации в 3 шага</h2>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-4">
+          <span class="step-num">1</span>
+          <h3>Опишите ситуацию</h3>
+          <p>Текстом или голосом, своими словами, как рассказали бы опытному коллеге.</p>
+          <div class="panel">
+            <div class="stage stage--fade-b"><div class="at-rise to-edge fit" style="--fit-max:264px;--ay:32px">
+              <div class="ui ui-panel ui-voice" data-ui="voice">
+                <div class="ui-voice__top"><span class="ui-chip ui-chip--ink">Запись</span><span class="ui-spacer"></span><span class="ui-voice__time" data-voice-time>00:41</span></div>
+                <div class="ui-voice__orb" data-voice-orb></div>
+                <div class="ui-voice__who"><span class="ui-voice__name">Наставник</span><span class="ui-voice__with">слушает</span></div>
+                <div class="ui-voice__cap" data-voice-cap>Двое в смене опаздывают, остальные ропщут.</div>
+                <div class="ui-voice__bar">
+                  <span class="ui-voice__btn" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="8" rx="2"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5V14"/></svg></span>
+                  <span class="ui-voice__wave" aria-hidden="true"><i style="--h:4"></i><i style="--h:7"></i><i style="--h:12"></i><i style="--h:9"></i><i style="--h:16"></i><i style="--h:11"></i><i style="--h:20"></i><i style="--h:14"></i><i style="--h:8"></i><i style="--h:17"></i><i style="--h:12"></i><i style="--h:6"></i><i style="--h:10"></i><i style="--h:18"></i><i style="--h:13"></i><i style="--h:7"></i></span>
+                  <span class="ui-voice__btn ui-voice__end" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="7" height="7" rx="1"/></svg></span>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-4">
+          <span class="step-num">2</span>
+          <h3>Ответьте на 2–3 вопроса</h3>
+          <p>Кто участвует, сколько есть времени, что уже пробовали.</p>
+          <div class="panel">
+            <div class="stage stage--fade-b"><div class="at-rise to-edge fit" style="--fit-max:340px;--ay:32px" data-ui-loop>
+              <div class="ui ui-panel ui-chat" data-ui="chat">
+                <div class="ui-head"><span class="ui-agent" aria-hidden="true"></span><div class="ui-title">Наставник</div><span class="ui-spacer"></span></div>
+                <div class="ui-chat__body">
+                  <div class="ui-msg ui-msg--me" data-chat-q><span class="ui-msg__text">Двое в смене опаздывают.</span></div>
+                  <div class="ui-msg ui-msg--bot" data-chat-a>
+                    <span class="ui-agent ui-msg__av" aria-hidden="true"></span>
+                    <span class="ui-msg__col">
+                      <span class="ui-chat__answer">Одни и те же люди? И говорили ли вы с ними <b>один на один</b>?</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="ui-chat__input"><span class="ui-chat__ph">Ответить</span><span class="ui-chat__send" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-4">
+          <span class="step-num">3</span>
+          <h3>Получите план</h3>
+          <p>Шаги, люди и сроки. Наставник напомнит, когда срок подойдёт.</p>
+          <div class="panel">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:24px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 150px)">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-agent ui-note__av" aria-hidden="true"></span><span class="ui-note__text"><span class="ui-note__title">План готов · 3 шага<time>сейчас</time></span><span class="ui-note__body">Порядок во второй смене за 14 дней</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Напомню в пятницу<time>сейчас</time></span><span class="ui-note__body">Разговор со сменой: что изменилось</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Шаг 1 выполнен<time>2 ч</time></span><span class="ui-note__body">Разговор один на один</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section statement" id="method" data-moment="word-highlight" aria-label="Метод">
+    <div class="wrap">
+      <p class="t-label">Метод</p>
+      <p class="mo-wh__text">Наставник разбирает каждую ситуацию по трём правилам Суворова: глазомер — понять обстановку, быстрота — решить без промедления, <strong>натиск</strong> — довести дело до конца.</p>
+    </div>
+  </section>
+
+  <section class="section" id="shtab" aria-labelledby="shtab-h">
+    <div class="wrap">
+      <div class="grid fill">
+        <div class="span-5 stack-4">
+          <h2 id="shtab-h">Штаб для вашей команды</h2>
+          <p class="t-lead">Пригласите заместителей и руководителей отделов. Задачи из плана уходят исполнителям одной кнопкой.</p>
+          <ul class="stack-3" style="margin:0;padding:0;list-style:none">
+            <li>Приглашение по ссылке в веб, MAX или Telegram</li>
+            <li>Общие задачи, исполнители и сроки</li>
+            <li>Подсказка, где горит срок</li>
+          </ul>
+          <p><a class="link" href="#price">Посмотреть цену для штаба</a></p>
+        </div>
+        <div class="frame frame--split frame--lit frame--fill span-6 start-7" data-ui-pause-host>
+          <div class="stage stage--fade-br"><div class="at-rise to-edge" style="--w:340px;--ay:56px" data-ui-loop>
+            <div class="ui ui-panel ui-checks" data-ui="checklist">
+              <div class="ui-checks__head"><div class="ui-title">Штаб «Линия 2»</div><span class="ui-spacer"></span><div class="ui-meta" data-checks-count>1 из 4</div></div>
+              <div class="ui-checks__bar"><i data-checks-bar style="--k:0.25"></i></div>
+              <ul class="ui-checks__list">
+                <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Общий список задач · Петров</span></li>
+                <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Спецификация · Миронов</span></li>
+                <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Сбор по 15 минут · Ковалёва</span></li>
+                <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Отчёт директору · Петров</span></li>
+              </ul>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="price" style="--hm: 2" aria-labelledby="price-h">
+    <div class="wrap">
+      <div class="grid fill">
+        <div class="span-4 stack-4">
+          <h2 id="price-h">Цена</h2>
+          <p class="muted">Одна цена за человека: для себя и для штаба.</p>
+          <ul class="stack-3" style="margin:0;padding:0;list-style:none">
+            <li>Разбор ситуаций и планы</li>
+            <li>Напоминания о сроках</li>
+            <li>Веб, MAX и Telegram</li>
+          </ul>
+          <p><a class="link" href="#faq">Прочитать ответы о цене</a></p>
+          <div class="panel frame--lit" style="--p-h: 200px">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:20px;--ay:24px">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-agent ui-note__av" aria-hidden="true"></span><span class="ui-note__text"><span class="ui-note__title">Счёт штаба «Линия 2»<time>ноябрь</time></span><span class="ui-note__body">3 человека × 1 500 ₽ = 4 500 ₽</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="2.5"/><path d="M3.5 13.5c.6-2.3 2.4-3.5 4.5-3.5s3.9 1.2 4.5 3.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Ковалёва вошла в штаб<time>вчера</time></span><span class="ui-note__body">По ссылке из MAX</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </div>
+        <article class="card card--plan span-4 start-5">
+          <h3>Для себя</h3>
+          <p class="muted">Один руководитель</p>
+          <p class="price"><span class="t-stat">1 500 ₽</span><span class="t-small muted">в месяц</span></p>
+          <a class="btn btn--secondary" href="/login">Начать одному</a>
+          <ul>
+            <li>Личный наставник</li>
+            <li>История всех ситуаций</li>
+          </ul>
+        </article>
+        <article class="card card--plan is-featured span-4 start-9">
+          <h3>Штаб</h3>
+          <p class="muted">Команда руководителей</p>
+          <p class="price"><span class="t-stat">1 500 ₽</span><span class="t-small muted">в месяц за человека</span></p>
+          <a class="btn btn--primary" href="/login">Начать разбор</a>
+          <ul>
+            <li>Наставник у каждого</li>
+            <li>Общие задачи и сроки</li>
+            <li>Один счёт на команду</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-h">
+    <div class="wrap">
+      <div class="grid">
+        <div class="span-5 stack-4">
+          <h2 id="faq-h">Вопросы</h2>
+          <p class="muted">Ответы на то, что спрашивают чаще всего.</p>
+        </div>
+        <div class="faq span-6 start-7">
+          <div class="faq__item"><h3>Чем это отличается от обычного чат-бота?</h3><p>Наставник не отвечает общими словами. Сначала уточняет обстановку, потом даёт план с исполнителями и сроками.</p></div>
+          <div class="faq__item"><h3>Для какого уровня руководителя?</h3><p>Для любого: от мастера участка до генерального директора. Ответы подстраиваются под ваш уровень.</p></div>
+          <div class="faq__item"><h3>Где работает наставник?</h3><p>В браузере, в MAX и в Telegram.</p></div>
+          <div class="faq__item"><h3>Как оплатить штаб?</h3><p>Глава штаба платит за всех: 1 500 ₽ в месяц за каждого человека.</p></div>
+          <div class="faq__item"><h3>Где хранятся данные?</h3><p>На серверах в России.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing footer--statement" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head">
+        <h2 id="close-h">Разберите первую ситуацию сегодня</h2>
+        <p class="t-small muted">1 500 ₽ в месяц за человека.</p>
+      </div>
+      <a class="btn btn--primary btn--xl btn--wide" href="/login">Начать разбор<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-6 stack-4">
+          <a class="nav__logo" href="#top"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
+          <p class="footer__lede">ИИ-наставник для руководителей по методу Суворова.</p>
+        </div>
+        <div class="span-2 footer__col"><h3>Продукт</h3><ul><li><a href="#plan">План действий</a></li><li><a href="#how">Три шага</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Команда</h3><ul><li><a href="#shtab">Штаб</a></li><li><a href="#method">Метод</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">Вопросы</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 Наука побеждать &nbsp; <a href="/offer">Оферта</a> &nbsp; <a href="/privacy">Персональные данные</a></span>
+        <div class="socials"></div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<nav class="actionbar" aria-label="Быстрые действия">
+  <a class="btn btn--primary" href="/login">Начать разбор</a>
+</nav>
+
+<script type="module" src="/static/landing/assets/system.js"></script>
+<script type="module" src="/static/landing/assets/motion/motion.js"></script>
+<script type="module" src="/static/landing/assets/layout/layout.js"></script>
+</body>
+</html>

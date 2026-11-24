@@ -1,0 +1,24 @@
+{% extends "_card.html" %}
+{% block title %}Оплата — Наука побеждать{% endblock %}
+{% block card %}
+<h1>Оплата</h1>
+<p class="price-line"><b>{{ settings().price_per_seat_rub|rub }}</b> в месяц за человека</p>
+{% if has_access %}
+<p class="muted">Доступ открыт.{% if settings().free_beta %} Сейчас идёт закрытый запуск, платить не нужно.{% endif %}</p>
+<a class="btn btn--primary" href="/app">К разговорам</a>
+{% elif not enabled %}
+<p class="muted">Оплата скоро включится. Напишите нам, и мы откроем доступ вручную.</p>
+{% else %}
+<form method="post" action="/billing/start" class="form-stack">
+  <input type="hidden" name="shtab_id" value="0">
+  <button class="btn btn--primary" type="submit">Оплатить для себя — {{ settings().price_per_seat_rub|rub }}</button>
+</form>
+{% for sh in owned %}
+<form method="post" action="/billing/start" class="form-stack">
+  <input type="hidden" name="shtab_id" value="{{ sh.id }}">
+  <button class="btn btn--secondary" type="submit">Оплатить штаб «{{ sh.name }}» — {{ (sh.members|length * settings().price_per_seat_rub)|rub }}</button>
+</form>
+{% endfor %}
+<p class="small muted">Оплата картой или через СБП в ЮKassa. Списание раз в месяц, отменить можно в любой момент письмом в поддержку.</p>
+{% endif %}
+{% endblock %}

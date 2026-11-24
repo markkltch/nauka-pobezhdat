@@ -1,0 +1,20 @@
+{% extends "_card.html" %}
+{% block title %}Штаб — Наука побеждать{% endblock %}
+{% block card %}
+{% if shtabs %}
+<h1>Ваши штабы</h1>
+<ul class="people">{% for sh in shtabs %}<li><a class="link-u" href="/shtab/{{ sh.id }}">Штаб «{{ sh.name }}»</a> · {{ sh.members|length }} чел.</li>{% endfor %}</ul>
+<h2>Новый штаб</h2>
+{% else %}
+<h1>Соберите штаб</h1>
+<p class="muted">Пригласите заместителей и руководителей отделов. Планы из разговоров с наставником станут общими задачами со сроками.</p>
+{% endif %}
+<form method="post" action="/shtab/new" class="form-stack">
+  <label for="name">Название</label>
+  <input id="name" name="name" placeholder="Например, Филиал Север" required>
+  <label for="about">О чём штаб (необязательно)</label>
+  <input id="about" name="about" placeholder="Например, запуск второй линии к 15 декабря">
+  <button class="btn btn--primary" type="submit">Создать штаб</button>
+</form>
+<p class="small"><a class="link-u" href="/app">К разговорам</a></p>
+{% endblock %}

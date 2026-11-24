@@ -1,0 +1,29 @@
+{% extends "_card.html" %}
+{% block title %}Вход — Наука побеждать{% endblock %}
+{% block card %}
+{% if step == "email" %}
+  <h1>Вход</h1>
+  <p class="muted">Пришлём код на почту. Пароль не нужен.</p>
+  <form method="post" action="/login" class="form-stack">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Рабочая почта</label>
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
+    <label class="check"><input type="checkbox" name="consent" value="1" required>
+      <span>Соглашаюсь с <a href="/offer" target="_blank">офертой</a> и даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> по <a href="/privacy" target="_blank">политике</a></span></label>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Получить код</button>
+  </form>
+{% else %}
+  <h1>Код из письма</h1>
+  <p class="muted">Отправили на {{ email }}. Письмо может прийти через минуту; проверьте папку «Спам».</p>
+  <form method="post" action="/login/code" class="form-stack">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="email" value="{{ email }}">
+    <label for="code">Код из 6 цифр</label>
+    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Войти</button>
+  </form>
+  <p class="small"><a class="link-u" href="/login?next={{ next|urlencode }}">Другой адрес или новый код</a></p>
+{% endif %}
+{% endblock %}

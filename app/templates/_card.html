@@ -1,0 +1,10 @@
+{# a narrow centred card page: login, onboarding, billing, legal #}
+{% extends "base.html" %}
+{% block body %}
+<main class="solo">
+  <a class="brand" href="/"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
+  <div class="solo__card">
+    {% block card %}{% endblock %}
+  </div>
+</main>
+{% endblock %}

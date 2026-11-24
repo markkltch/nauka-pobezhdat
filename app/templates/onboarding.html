@@ -1,0 +1,22 @@
+{% extends "_card.html" %}
+{% block title %}О вас — Наука побеждать{% endblock %}
+{% block card %}
+<h1>Расскажите о себе</h1>
+<p class="muted">Наставник подстроит ответы под ваш уровень.</p>
+<form method="post" action="/onboarding" class="form-stack">
+  <input type="hidden" name="next" value="{{ next }}">
+  <label for="name">Имя и фамилия</label>
+  <input id="name" name="name" autocomplete="name" value="{{ user.name }}" required>
+  <label for="role">Должность</label>
+  <input id="role" name="role" placeholder="Например, начальник производства" value="{{ user.role }}">
+  <fieldset class="levels">
+    <legend>Ваш уровень</legend>
+    {% for key, label in LEVELS.items() %}
+    <label class="level"><input type="radio" name="level" value="{{ key }}" {% if user.level == key or (not user.level and key == 'mid') %}checked{% endif %} required>
+      <span><b>{{ label }}</b>
+      <span>{% if key == 'line' %}Мастер, бригадир, тимлид: люди в смене и ежедневные задачи{% elif key == 'mid' %}Начальник отдела или филиала: планы, приоритеты, стыки между отделами{% else %}Директор, совет директоров: стратегия, кризисы, кадровые решения{% endif %}</span></span></label>
+    {% endfor %}
+  </fieldset>
+  <button class="btn btn--primary" type="submit">Продолжить</button>
+</form>
+{% endblock %}

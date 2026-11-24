@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Штаб «{{ shtab.name }}» — Наука побеждать{% endblock %}
+{% block body %}
+<a class="skip-link" href="#board">К задачам</a>
+<header class="shtab-head">
+  <div class="shtab-head__in">
+    <div class="crumbs"><a href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>К разговорам</a></div>
+    <div class="shtab-head__row">
+      <div>
+        <h1>Штаб «{{ shtab.name }}»</h1>
+        {% if shtab.about %}<p>{{ shtab.about }}</p>{% endif %}
+      </div>
+      <a class="btn btn--primary" href="/app">Новая ситуация</a>
+    </div>
+  </div>
+</header>
+
+<main class="board" id="board">
+  <div>
+    {% if late %}
+    <div class="hint">
+      <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
+      <p>Срок прошёл: {{ late|length|plural('задача', 'задачи', 'задач') }}. Первая — <b>«{{ late[0].text[:80] }}»</b>{% if late[0].assignee %}, {{ late[0].assignee.display_name }}{% endif %}.</p>
+    </div>
+    {% endif %}
+
+    {% set open = tasks|rejectattr('done')|list %}
+    {% set done = tasks|selectattr('done')|list %}
+    <section class="group" aria-labelledby="g-work">
+      <h2 id="g-work">В работе <span>{{ open|length }}</span></h2>
+      {% if open %}
+      <ul class="tasks">
+        {% for t in open %}
+        <li class="task {% if t.late %}is-late{% endif %}">
+          <form method="post" action="/steps/{{ t.id }}/toggle"><label><input type="checkbox" onchange="this.form.submit()"><span class="task__text">{{ t.text }}{% if t.plan %}<small>Из плана «{{ t.plan.title }}»</small>{% endif %}</span></label></form>
+          <form method="post" action="/steps/{{ t.id }}/assign" class="who">
+            <label class="sr-only" for="as{{ t.id }}">Исполнитель</label>
+            <select id="as{{ t.id }}" name="assignee_id" onchange="this.form.submit()">
+              <option value="0">{{ t.owner_name or "Не назначен" }}</option>
+              {% for m in shtab.members %}<option value="{{ m.user.id }}" {% if t.assignee_id == m.user.id %}selected{% endif %}>{{ m.user.display_name }}</option>{% endfor %}
+            </select>
+          </form>
+          <time>{% if t.late %}срок прошёл, {% endif %}{{ t.due|ru_date }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty">Задач нет. Отправьте сюда план из разговора с наставником или добавьте задачу ниже.</p>
+      {% endif %}
+    </section>
+
+    <section class="group" aria-labelledby="g-add">
+      <h2 id="g-add">Новая задача</h2>
+      <form class="add-task" method="post" action="/shtab/{{ shtab.id }}/tasks">
+        <label class="sr-only" for="t-text">Задача</label>
+        <input id="t-text" name="text" placeholder="Что сделать" required>
+        <label class="sr-only" for="t-who">Исполнитель</label>
+        <select id="t-who" name="assignee_id"><option value="0">Исполнитель</option>{% for m in shtab.members %}<option value="{{ m.user.id }}">{{ m.user.display_name }}</option>{% endfor %}</select>
+        <label class="sr-only" for="t-due">Срок</label>
+        <input id="t-due" name="due" type="date">
+        <button class="btn btn--secondary" type="submit">Добавить</button>
+      </form>
+    </section>
+
+    {% if done %}
+    <section class="group" aria-labelledby="g-done">
+      <h2 id="g-done">Сделано <span>{{ done|length }}</span></h2>
+      <ul class="tasks">
+        {% for t in done %}
+        <li class="task is-done">
+          <form method="post" action="/steps/{{ t.id }}/toggle"><label><input type="checkbox" checked onchange="this.form.submit()"><span class="task__text">{{ t.text }}</span></label></form>
+          <span class="who">{{ t.assignee.display_name if t.assignee else t.owner_name }}</span><time>{{ t.due|ru_date }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside>
+    <section class="panel-card" aria-labelledby="p-people">
+      <h2 id="p-people">Люди</h2>
+      <ul class="people">
+        {% for m in shtab.members %}
+        <li><span class="av {% if m.user.id == shtab.owner_id %}av--ink{% endif %}">{{ m.user.initials }}</span><span><b>{{ m.user.display_name }}</b><span>{{ m.title or m.user.role or "Участник" }}</span></span></li>
+        {% endfor %}
+      </ul>
+      <label for="inv" class="small muted">Ссылка-приглашение — отправьте её в MAX, Telegram или почтой</label>
+      <div class="invite"><input id="inv" value="{{ invite_url }}" readonly onclick="this.select()"><button class="btn btn--secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('inv').value).then(()=>{this.textContent='Скопировано'})">Скопировать</button></div>
+    </section>
+    <section class="panel-card" aria-labelledby="p-bill">
+      <h2 id="p-bill">Счёт штаба</h2>
+      <div class="bill">
+        <p><span>{{ shtab.members|length|plural('человек', 'человека', 'человек') }} × {{ settings().price_per_seat_rub|rub }}</span><b>{{ (shtab.members|length * settings().price_per_seat_rub)|rub }}</b></p>
+        <p class="bill__total"><span>В месяц</span><b>{{ (shtab.members|length * settings().price_per_seat_rub)|rub }}</b></p>
+      </div>
+      {% if settings().free_beta %}<p class="small muted">Сейчас доступ бесплатный: идёт закрытый запуск.</p>
+      {% elif is_owner %}<a class="btn btn--secondary" href="/billing">Оплатить штаб</a>{% endif %}
+    </section>
+  </aside>
+</main>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "_card.html" %}
+{% block title %}Владельцу — Наука побеждать{% endblock %}
+{% block card %}
+<h1>Сводка</h1>
+<div class="bill">
+  <p><span>Пользователей</span><b>{{ stats.users }}</b></p>
+  <p><span>Ситуаций всего</span><b>{{ stats.situations }}</b></p>
+  <p><span>Планов в этом месяце</span><b>{{ stats.plans_month }}</b></p>
+  <p><span>Штабов</span><b>{{ stats.shtabs }}</b></p>
+  <p class="bill__total"><span>Расход на ИИ в этом месяце</span><b>{{ stats.cost_month }} ₽</b></p>
+</div>
+<h2>Расход по людям, этот месяц</h2>
+<table class="table">
+  <thead><tr><th scope="col">Почта</th><th scope="col">Вызовов</th><th scope="col">₽</th></tr></thead>
+  <tbody>{% for email, calls, cost in rows %}<tr><td>{{ email }}</td><td>{{ calls }}</td><td>{{ '%.2f'|format(cost) }}</td></tr>{% else %}<tr><td colspan="3">Пока пусто</td></tr>{% endfor %}</tbody>
+</table>
+{% endblock %}
