@@ -107,3 +107,15 @@ def test_yandex_ai_studio_request(settings, monkeypatch):
     assert seen["body"]["model"] == "gpt://b1gfolder/aliceai-llm/latest"
     assert seen["body"]["max_tokens"] == 700
     assert llm.cost_rub(reply) == pytest.approx(1000 * 0.5 / 1000 + 500 * 1.2 / 1000)
+
+
+def test_sendmail_sets_envelope_sender(settings, monkeypatch, tmp_path):
+    from app import mailer
+    fake = tmp_path / "sendmail"
+    fake.write_text("")
+    settings.mail_via_sendmail, settings.sendmail_path = True, str(fake)
+    settings.smtp_from = "Наука побеждать <noreply@nauka.ogiinst.ru>"
+    seen = {}
+    monkeypatch.setattr(mailer.subprocess, "run", lambda args, **kw: seen.update(args=args))
+    mailer.send("a@b.ru", "Код", "123456")
+    assert seen["args"][-2:] == ["-f", "noreply@nauka.ogiinst.ru"]

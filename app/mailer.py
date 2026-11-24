@@ -4,6 +4,7 @@ import os
 import smtplib
 import ssl
 import subprocess
+from email.utils import parseaddr
 from email.message import EmailMessage
 
 from .config import get_settings
@@ -20,7 +21,10 @@ def send(to: str, subject: str, text: str) -> None:
     msg.set_content(text)
     if s.mail_via_sendmail and os.path.exists(s.sendmail_path):
         # shared hosting: the local MTA, no mailbox password needed
-        subprocess.run([s.sendmail_path, "-t", "-i"], input=msg.as_bytes(), check=True, timeout=30)
+        # -f sets the envelope sender: without it exim sends MAIL FROM:<> (a bounce),
+        # which fails SPF/DMARC alignment and Yandex drops or spams the letter
+        envelope_from = parseaddr(s.smtp_from)[1]
+        subprocess.run([s.sendmail_path, "-t", "-i", "-f", envelope_from], input=msg.as_bytes(), check=True, timeout=30)
         return
     if not s.smtp_host:
         log.warning("MAIL (dev, not sent) to=%s subject=%s\n%s", to, subject, text)
