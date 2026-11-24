@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     admin_emails: str = ""  # comma-separated
     database_url: str = "sqlite:///./dev.db"
+    run_jobs_in_process: bool = True  # false on shared hosting: cron runs app.cron instead
 
     # access
     free_beta: bool = True  # everyone gets access without payment until billing is live

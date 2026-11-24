@@ -23,11 +23,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 HERE = Path(__file__).resolve().parent
 
 
+init_db()  # also here: the WSGI wrapper on shared hosting may skip ASGI lifespan events
+
+
 @asynccontextmanager
 async def lifespan(_app):
-    init_db()
     s = get_settings()
-    if s.llm_provider != "fake" or s.smtp_host:
+    if s.run_jobs_in_process and (s.llm_provider != "fake" or s.smtp_host):
         jobs.start()
     yield
 
