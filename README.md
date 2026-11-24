@@ -54,3 +54,9 @@ pytest -q
 ## Владельцу
 
 `/admin` (адреса из `ADMIN_EMAILS`): пользователи, планы за месяц, расход на ИИ всего и по людям.
+
+## Почта на хостинге reg.ru
+
+Письма уходят через sendmail хостинга (MAIL_VIA_SENDMAIL=true) с адреса noreply@nauka.ogiinst.ru.
+Для поддомена в ispmanager создан почтовый домен nauka.ogiinst.ru с DKIM (селектор dkim) и DMARC;
+панель сама добавила записи SPF, DKIM и DMARC в DNS. Без этого Яндекс кладёт письма в «Спам».
