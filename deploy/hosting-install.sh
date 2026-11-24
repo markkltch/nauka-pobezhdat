@@ -18,7 +18,7 @@ if [ ! -f .env ]; then
   cp .env.example .env
   sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$(openssl rand -hex 32)|" .env
   sed -i "s|^DOMAIN=.*|DOMAIN=$SITE|; s|^BASE_URL=.*|BASE_URL=https://$SITE|" .env
-  printf '\nDATABASE_URL=sqlite:///%s/nauka.db\nRUN_JOBS_IN_PROCESS=false\n' "$APP" >> .env
+  printf '\nDATABASE_URL=sqlite:///%s/nauka.db\nRUN_JOBS_IN_PROCESS=false\nMAIL_VIA_SENDMAIL=true\n' "$APP" >> .env
   chmod 600 .env
   echo "Created $APP/.env — add ADMIN_EMAILS, SMTP_* and the LLM key there."
 fi
@@ -26,5 +26,5 @@ fi
 mkdir -p "$WEB"
 cp "$APP/passenger_wsgi.py" "$WEB/passenger_wsgi.py"
 rm -f "$WEB/index.html" "$WEB/index.php"
-touch "$WEB/.restart-app"
+mkdir -p "$WEB/tmp" && touch "$WEB/tmp/restart.txt" "$WEB/.restart-app"
 echo "Done. Check https://$SITE/healthz"

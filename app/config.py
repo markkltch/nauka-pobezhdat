@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "Наука побеждать <no-reply@example.com>"
     smtp_ssl: bool = True
+    mail_via_sendmail: bool = False  # true on shared hosting: use the local sendmail
+    sendmail_path: str = "/usr/sbin/sendmail"
 
     # LLM: "gigachat", "yandex" or "fake"
     llm_provider: str = "fake"
