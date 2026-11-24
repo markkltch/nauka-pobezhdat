@@ -29,6 +29,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(160), default="")  # должность, своими словами
     level: Mapped[str] = mapped_column(String(8), default="")  # line | mid | top
     consent_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    extra_plans: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # bought разборы left
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
     @property
@@ -177,6 +178,20 @@ class Payment(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
 
+class PackOrder(Base):
+    """A one-off purchase of extra разборов."""
+
+    __tablename__ = "pack_orders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    plans: Mapped[int] = mapped_column(Integer)
+    amount_rub: Mapped[float] = mapped_column(Float)
+    provider_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    status: Mapped[str] = mapped_column(String(24), default="pending")
+    credited: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
 class Usage(Base):
     """One call to a language model: tokens and cost, for the unit economics."""
 
@@ -187,5 +202,7 @@ class Usage(Base):
     model: Mapped[str] = mapped_column(String(64))
     purpose: Mapped[str] = mapped_column(String(24))
     tokens: Mapped[int] = mapped_column(Integer, default=0)
+    tokens_in: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    tokens_out: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     cost_rub: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now, index=True)

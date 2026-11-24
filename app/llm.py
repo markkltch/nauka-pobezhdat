@@ -1,4 +1,4 @@
-"""One door to the language models: GigaChat, YandexGPT, or a fake for development and tests.
+"""One door to the language models: Yandex AI Studio, GigaChat, or a fake for development and tests.
 
 Two tiers: "light" asks the clarifying questions, "strong" writes the plan. Every call is
 written to the Usage ledger with its tokens and cost, so the unit economics can be checked.
@@ -24,7 +24,13 @@ log = logging.getLogger("llm")
 class Reply:
     text: str
     model: str
-    tokens: int
+    tokens_in: int
+    tokens_out: int
+    tier: str = "light"
+
+    @property
+    def tokens(self) -> int:
+        return self.tokens_in + self.tokens_out
 
 
 class LLMError(RuntimeError):
@@ -64,48 +70,50 @@ class GigaChat:
             self._token_exp = body.get("expires_at", 0) / 1000 or time.time() + 25 * 60
             return self._token
 
-    def chat(self, messages: list[dict], tier: str, temperature: float) -> Reply:
+    def chat(self, messages: list[dict], tier: str, temperature: float, max_tokens: int) -> Reply:
         s = get_settings()
         model = s.gigachat_strong_model if tier == "strong" else s.gigachat_light_model
         r = httpx.post(
             self.chat_url,
             headers={"Authorization": f"Bearer {self._access_token()}", "Accept": "application/json"},
-            json={"model": model, "messages": messages, "temperature": temperature},
+            json={"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens},
             verify=self._verify(),
             timeout=s.llm_timeout_s,
         )
         r.raise_for_status()
         body = r.json()
-        text = body["choices"][0]["message"]["content"]
-        return Reply(text=text, model=model, tokens=int(body.get("usage", {}).get("total_tokens", 0)))
+        return _openai_reply(body, model, tier)
 
 
-class YandexGPT:
-    url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+def _openai_reply(body: dict, model: str, tier: str) -> Reply:
+    usage = body.get("usage") or {}
+    return Reply(text=body["choices"][0]["message"]["content"] or "", model=model, tier=tier,
+                 tokens_in=int(usage.get("prompt_tokens", 0)), tokens_out=int(usage.get("completion_tokens", 0)))
 
-    def chat(self, messages: list[dict], tier: str, temperature: float) -> Reply:
+
+class YandexAIStudio:
+    """Yandex AI Studio through its OpenAI-compatible Chat Completions API (API key of a service account)."""
+
+    def chat(self, messages: list[dict], tier: str, temperature: float, max_tokens: int) -> Reply:
         s = get_settings()
         model = s.yandex_strong_model if tier == "strong" else s.yandex_light_model
         r = httpx.post(
-            self.url,
-            headers={"Authorization": f"Api-Key {s.yandex_api_key}", "x-folder-id": s.yandex_folder_id},
-            json={
-                "modelUri": f"gpt://{s.yandex_folder_id}/{model}",
-                "completionOptions": {"stream": False, "temperature": temperature, "maxTokens": 2000},
-                "messages": [{"role": m["role"], "text": m["content"]} for m in messages],
-            },
+            f"{s.yandex_base_url.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Api-Key {s.yandex_api_key}", "OpenAI-Project": s.yandex_folder_id},
+            json={"model": f"gpt://{s.yandex_folder_id}/{model}", "messages": messages,
+                  "temperature": temperature, "max_tokens": max_tokens},
             timeout=s.llm_timeout_s,
         )
+        if r.status_code >= 400:
+            log.error("Yandex AI Studio %s: %s", r.status_code, r.text[:500])
         r.raise_for_status()
-        result = r.json()["result"]
-        text = result["alternatives"][0]["message"]["text"]
-        return Reply(text=text, model=model, tokens=int(result.get("usage", {}).get("totalTokens", 0)))
+        return _openai_reply(r.json(), model, tier)
 
 
 class Fake:
     """Deterministic answers in the real shapes, so the whole product works without a key."""
 
-    def chat(self, messages: list[dict], tier: str, temperature: float) -> Reply:
+    def chat(self, messages: list[dict], tier: str, temperature: float, max_tokens: int) -> Reply:
         system = messages[0]["content"]
         if "РЕЖИМ: ВОПРОСЫ" in system:
             text = json.dumps({"title": "Ситуация в команде", "ready": False, "questions": [
@@ -128,10 +136,11 @@ class Fake:
             }, ensure_ascii=False)
         else:
             text = "Хороший вопрос. Начните с первого шага плана сегодня и вернитесь ко мне с результатом."
-        return Reply(text=text, model=f"fake-{tier}", tokens=400 if tier == "light" else 900)
+        return Reply(text=text, model=f"fake-{tier}", tier=tier,
+                     tokens_in=estimate_tokens(messages), tokens_out=min(max_tokens, len(text) // 3))
 
 
-_PROVIDERS = {"gigachat": GigaChat, "yandex": YandexGPT, "fake": Fake}
+_PROVIDERS = {"gigachat": GigaChat, "yandex": YandexAIStudio, "fake": Fake}
 _instance = None
 
 
@@ -143,18 +152,35 @@ def provider():
     return _instance
 
 
-def chat(messages: list[dict], tier: str = "light", temperature: float = 0.4) -> Reply:
+def chat(messages: list[dict], tier: str = "light", temperature: float = 0.4, max_tokens: int = 600) -> Reply:
     try:
-        return provider().chat(messages, tier, temperature)
+        return provider().chat(messages, tier, temperature, max_tokens)
     except httpx.HTTPError as e:
         log.exception("LLM call failed")
         raise LLMError("Модель не ответила") from e
 
 
-def cost_rub(reply: Reply, tier: str) -> float:
+def _prices(tier: str) -> tuple[float, float]:
     s = get_settings()
-    price = s.price_strong_per_1k if tier == "strong" else s.price_light_per_1k
-    return round(reply.tokens / 1000 * price, 4)
+    if tier == "strong":
+        return s.price_strong_in_per_1k, s.price_strong_out_per_1k
+    return s.price_light_in_per_1k, s.price_light_out_per_1k
+
+
+def cost_rub(reply: Reply) -> float:
+    p_in, p_out = _prices(reply.tier)
+    return round((reply.tokens_in * p_in + reply.tokens_out * p_out) / 1000, 4)
+
+
+def estimate_tokens(messages: list[dict]) -> int:
+    chars = sum(len(m["content"]) for m in messages)
+    return int(chars / get_settings().chars_per_token_estimate) + 10 * len(messages)
+
+
+def max_cost_rub(messages: list[dict], tier: str, max_tokens: int) -> float:
+    """An upper estimate of one call, checked against the разбор budget before the call is made."""
+    p_in, p_out = _prices(tier)
+    return (estimate_tokens(messages) * p_in + max_tokens * p_out) / 1000
 
 
 _JSON = re.compile(r"\{.*\}", re.S)

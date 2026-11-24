@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import auth, billing, jobs, llm, mentor
+from . import access, auth, billing, jobs, llm, mentor
 from .config import get_settings
 from .db import get_db, init_db
 from .models import LEVELS, Member, Plan, Shtab, Situation, Step, Usage, User, now
@@ -184,8 +184,7 @@ def onboarding_save(name: str = Form(""), role: str = Form(""), level: str = For
 def _sidebar(db: Session, user: User) -> dict:
     situations = db.scalars(select(Situation).where(Situation.user_id == user.id).order_by(Situation.updated_at.desc())).all()
     shtabs = my_shtabs(db, user)
-    return {"situations": situations, "shtabs": shtabs, "plans_used": mentor.plans_this_month(db, user),
-            "plan_limit": get_settings().monthly_plan_limit}
+    return {"situations": situations, "shtabs": shtabs, "plan": access.summary(db, user)}
 
 
 def my_shtabs(db: Session, user: User) -> list[Shtab]:
@@ -196,8 +195,6 @@ def my_shtabs(db: Session, user: User) -> list[Shtab]:
 def _gate(db: Session, user: User) -> RedirectResponse | None:
     if not user.level:
         return see_other("/onboarding")
-    if not billing.has_access(db, user):
-        return see_other("/billing")
     return None
 
 
@@ -206,7 +203,7 @@ def app_home(request: Request, user: User = Depends(auth.require_user), db: Sess
     if r := _gate(db, user):
         return r
     return page(request, "app.html", user=user, current=None, **_sidebar(db, user),
-                limit=mentor.limit_reached(db, user))
+                limit=not access.can_start(db, user))
 
 
 def _own_situation(db: Session, user: User, sid: int) -> Situation:
@@ -222,8 +219,9 @@ def app_new(text: str = Form(...), user: User = Depends(auth.require_user), db: 
         return r
     if not text.strip():
         return see_other("/app")
-    if mentor.limit_reached(db, user):
+    if not access.can_start(db, user):
         return see_other("/app?limit=1")
+    access.consume(db, user)
     sit = Situation(user_id=user.id)
     db.add(sit)
     db.flush()
@@ -242,7 +240,7 @@ def app_situation(request: Request, sid: int, err: int = 0, user: User = Depends
         return r
     sit = _own_situation(db, user, sid)
     return page(request, "app.html", user=user, current=sit, err=err, **_sidebar(db, user),
-                limit=mentor.limit_reached(db, user) and sit.stage != "follow")
+                limit=False, room=sit.stage != "follow" or mentor.can_talk(db, user, sit))
 
 
 @app.post("/app/{sid}/say")
@@ -252,12 +250,13 @@ def app_say(sid: int, text: str = Form(...), user: User = Depends(auth.require_u
     sit = _own_situation(db, user, sid)
     if not text.strip():
         return see_other(f"/app/{sid}")
-    if sit.stage != "follow" and mentor.limit_reached(db, user):
-        return see_other(f"/app/{sid}")
     if len(sit.messages) >= get_settings().messages_per_situation:
         return see_other(f"/app/{sid}?err=2")
     try:
         mentor.handle(db, user, sit, text)
+    except mentor.BudgetSpent:
+        db.rollback()
+        return see_other(f"/app/{sid}?err=2")
     except llm.LLMError:
         db.rollback()
         return see_other(f"/app/{sid}?err=1")
@@ -385,8 +384,25 @@ def shtab_join(invite_token: str, user: User = Depends(auth.require_user), db: S
 @app.get("/billing", response_class=HTMLResponse)
 def billing_page(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     owned = db.scalars(select(Shtab).where(Shtab.owner_id == user.id)).all()
-    return page(request, "billing.html", user=user, owned=owned, has_access=billing.has_access(db, user),
+    return page(request, "billing.html", user=user, owned=owned, plan=access.summary(db, user),
                 enabled=get_settings().billing_enabled)
+
+
+@app.post("/billing/pack")
+def billing_pack(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if not get_settings().billing_enabled or access.tier(db, user) != access.PRO:
+        return see_other("/billing")
+    return see_other(billing.start_pack(db, user))
+
+
+@app.get("/billing/pack/{order_id}")
+def billing_pack_return(order_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    from .models import PackOrder
+
+    order = db.get(PackOrder, order_id)
+    if order and order.user_id == user.id and order.provider_id:
+        billing.sync_payment(db, order.provider_id)
+    return see_other("/app")
 
 
 @app.post("/billing/start")

@@ -102,7 +102,7 @@ def test_limit_and_admin(client):
     client.post(f"/app/{sid}/say", data={"text": "Делят станок"})
     r = client.post("/app/new", data={"text": "Ещё одна"}, follow_redirects=False)
     assert r.headers["location"] == "/app?limit=1"
-    assert "Лимит разборов" in client.get("/app").text
+    assert "Разборы на этот месяц закончились" in client.get("/app").text
     page = client.get("/admin").text
     assert "Расход на ИИ" in page
     sign_in(client, "deputy@example.ru", level="line")

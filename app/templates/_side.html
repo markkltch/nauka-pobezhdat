@@ -1,7 +1,7 @@
 <aside class="side" aria-label="Ситуации">
   <a class="brand" href="/app"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
   <a class="btn btn--primary side__new" href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Новая ситуация</a>
-  <p class="side__label">Разборов в этом месяце: {{ plans_used }} из {{ plan_limit }}</p>
+  <p class="side__label">Разборов в этом месяце: {{ plan.used }} из {{ plan.allowance }}{% if plan.extra %} · в запасе {{ plan.extra }}{% endif %}{% if plan.tier == 'free' %} · <a href="/billing">полный доступ</a>{% endif %}</p>
   {% if situations %}
   <ul class="list">
     {% for s in situations %}

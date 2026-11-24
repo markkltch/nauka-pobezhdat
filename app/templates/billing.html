@@ -1,24 +1,55 @@
 {% extends "_card.html" %}
-{% block title %}Оплата — Наука побеждать{% endblock %}
+{% block title %}Тариф — Наука побеждать{% endblock %}
 {% block card %}
-<h1>Оплата</h1>
-<p class="price-line"><b>{{ settings().price_per_seat_rub|rub }}</b> в месяц за человека</p>
-{% if has_access %}
-<p class="muted">Доступ открыт.{% if settings().free_beta %} Сейчас идёт закрытый запуск, платить не нужно.{% endif %}</p>
-<a class="btn btn--primary" href="/app">К разговорам</a>
-{% elif not enabled %}
-<p class="muted">Оплата скоро включится. Напишите нам, и мы откроем доступ вручную.</p>
-{% else %}
-<form method="post" action="/billing/start" class="form-stack">
-  <input type="hidden" name="shtab_id" value="0">
-  <button class="btn btn--primary" type="submit">Оплатить для себя — {{ settings().price_per_seat_rub|rub }}</button>
-</form>
-{% for sh in owned %}
-<form method="post" action="/billing/start" class="form-stack">
-  <input type="hidden" name="shtab_id" value="{{ sh.id }}">
-  <button class="btn btn--secondary" type="submit">Оплатить штаб «{{ sh.name }}» — {{ (sh.members|length * settings().price_per_seat_rub)|rub }}</button>
-</form>
-{% endfor %}
-<p class="small muted">Оплата картой или через СБП в ЮKassa. Списание раз в месяц, отменить можно в любой момент письмом в поддержку.</p>
+<h1>Тариф</h1>
+<p class="muted">Сейчас у вас <b>{{ plan.tier_name|lower }}</b>: {{ plan.used }} из {{ plan.allowance }} разборов в этом месяце{% if plan.extra %}, ещё {{ plan.extra }} в запасе{% endif %}.{% if settings().free_beta %} Идёт закрытый запуск: полный доступ открыт без оплаты.{% endif %}</p>
+
+<div class="tiers">
+  <section class="tier {% if plan.tier == 'free' %}is-on{% endif %}">
+    <h2>Бесплатный</h2>
+    <p class="tier__price">0 ₽</p>
+    <ul>
+      <li>{{ settings().free_plans_per_month|plural('разбор', 'разбора', 'разборов') }} в месяц</li>
+      <li>Штаб, задачи и сроки без ограничений</li>
+      <li>Напоминания о сроках на почту</li>
+    </ul>
+  </section>
+  <section class="tier {% if plan.tier == 'pro' %}is-on{% endif %}">
+    <h2>Полный</h2>
+    <p class="tier__price">{{ settings().price_per_seat_rub|rub }} <span>в месяц за человека</span></p>
+    <ul>
+      <li>{{ settings().monthly_plan_limit }} разборов в месяц</li>
+      <li>Всё, что в бесплатном</li>
+      <li>Можно докупить разборы</li>
+    </ul>
+    {% if plan.tier == 'free' and enabled %}
+    <form method="post" action="/billing/start" class="form-stack">
+      <input type="hidden" name="shtab_id" value="0">
+      <button class="btn btn--primary" type="submit">Подключить для себя</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+{% if enabled %}
+  {% if plan.tier == 'pro' %}
+  <section class="pack">
+    <h2>Докупить разборы</h2>
+    <p class="muted">{{ settings().pack_size }} разборов за {{ settings().pack_price_rub|rub }}. Не сгорают и тратятся, когда закончится месячный лимит.</p>
+    <form method="post" action="/billing/pack" class="form-stack">
+      <button class="btn btn--secondary" type="submit">Купить {{ settings().pack_size }} разборов</button>
+    </form>
+  </section>
+  {% endif %}
+  {% for sh in owned %}
+  <form method="post" action="/billing/start" class="form-stack">
+    <input type="hidden" name="shtab_id" value="{{ sh.id }}">
+    <button class="btn btn--secondary" type="submit">Полный доступ для штаба «{{ sh.name }}»: {{ sh.members|length }} чел., {{ (sh.members|length * settings().price_per_seat_rub)|rub }} в месяц</button>
+  </form>
+  {% endfor %}
+  <p class="small muted">Оплата картой или через СБП в ЮKassa. Полный доступ продлевается раз в месяц, отменить можно в любой момент письмом в поддержку.</p>
+{% elif not settings().free_beta %}
+  <p class="small muted">Оплата скоро включится. Напишите нам, и мы откроем полный доступ вручную.</p>
 {% endif %}
+<p><a href="/app">К разговорам</a></p>
 {% endblock %}

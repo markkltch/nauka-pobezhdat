@@ -13,7 +13,15 @@
     <div class="feed">
       {% if request.query_params.get('err') %}<p class="error" role="alert">Наставник не ответил. Попробуйте ещё раз через минуту.</p>{% endif %}
       {% if limit %}
-      <div class="notice"><b>Лимит разборов на этот месяц исчерпан.</b> Вы можете продолжать разговоры по уже готовым планам. Новые разборы откроются 1-го числа.</div>
+      <div class="notice">
+        {% if plan.tier == 'free' %}
+        <b>Бесплатные разборы на этот месяц закончились.</b> Новые откроются 1-го числа. Штаб и задачи работают как раньше.
+        <p><a class="btn btn--primary" href="/billing">Полный доступ: {{ settings().monthly_plan_limit }} разборов за {{ settings().price_per_seat_rub|rub }}</a></p>
+        {% else %}
+        <b>Разборы на этот месяц закончились.</b> Новые откроются 1-го числа, а пока можно докупить.
+        <p><a class="btn btn--primary" href="/billing">Ещё {{ settings().pack_size }} разборов за {{ settings().pack_price_rub|rub }}</a></p>
+        {% endif %}
+      </div>
       {% else %}
       <div class="start">
         <p class="start__lead">Что случилось? Расскажите, как рассказали бы опытному коллеге: кто участвует, что мешает, к какому сроку нужен результат.</p>
@@ -96,12 +104,10 @@
       {% endfor %}
       <span id="end"></span>
       {% if err == 1 %}<p class="error" role="alert">Наставник не ответил. Отправьте сообщение ещё раз.</p>{% endif %}
-      {% if err == 2 %}<p class="notice">Разговор получился длинным. Начните новую ситуацию — так наставнику проще держать суть.</p>{% endif %}
+      {% if err == 2 or not room %}<p class="notice">Этот разбор подошёл к концу: разговор получился длинным. Если остались вопросы, начните новую ситуацию и коротко опишите, что уже сделано.</p>{% endif %}
     </div>
 
-    {% if limit %}
-    <p class="notice composer-note">Лимит разборов на этот месяц исчерпан: новый план составить нельзя. Новые разборы откроются 1-го числа.</p>
-    {% else %}
+    {% if room %}
     <form class="composer" method="post" action="/app/{{ current.id }}/say" data-busy>
       <label class="sr-only" for="say">Сообщение наставнику</label>
       <textarea id="say" name="text" rows="1" placeholder="{% if current.stage == 'plan' %}Ответьте на вопросы{% else %}Спросите про план{% endif %}" required data-enter-sends></textarea>

@@ -1,4 +1,4 @@
-"""Access and payments: 1 500 ₽ a month per person; a shtab pays for its members.
+"""Payments: 1 500 ₽ a month per person, a shtab pays for its members, packs of extra разборов.
 
 YooKassa: the first payment saves the card (or SBP) for monthly auto-payments. A webhook only
 says "something happened"; the server always re-reads the payment from YooKassa before trusting it.
@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import get_settings
-from .models import Member, Payment, Shtab, Subscription, User, now
+from .models import PackOrder, Payment, Shtab, Subscription, User, now
 
 log = logging.getLogger("billing")
 API = "https://api.yookassa.ru/v3"
@@ -23,21 +23,6 @@ PERIOD = dt.timedelta(days=30)
 
 def _active(sub: Subscription | None) -> bool:
     return bool(sub and sub.status == "active" and sub.paid_until and sub.paid_until > now())
-
-
-def has_access(db: Session, user: User) -> bool:
-    if get_settings().free_beta:
-        return True
-    own = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.shtab_id.is_(None))
-                     .order_by(Subscription.id.desc())).first()
-    if _active(own):
-        return True
-    shtab_ids = db.scalars(select(Member.shtab_id).where(Member.user_id == user.id)).all()
-    for sid in shtab_ids:
-        sub = db.scalars(select(Subscription).where(Subscription.shtab_id == sid).order_by(Subscription.id.desc())).first()
-        if _active(sub):
-            return True
-    return False
 
 
 def seats_for(shtab: Shtab) -> int:
@@ -85,10 +70,55 @@ def start_payment(db: Session, payer: User, shtab: Shtab | None) -> str:
     return p["confirmation"]["confirmation_url"]
 
 
+def _receipt(email: str, text: str, amount: float) -> dict:
+    return {"customer": {"email": email}, "items": [{
+        "description": text[:128], "quantity": "1.00",
+        "amount": {"value": f"{amount:.2f}", "currency": "RUB"}, "vat_code": get_settings().yookassa_vat_code,
+        "payment_subject": "service", "payment_mode": "full_payment"}]}
+
+
+def start_pack(db: Session, user: User) -> str:
+    """One-off payment for extra разборов; no card is saved."""
+    s = get_settings()
+    order = PackOrder(user_id=user.id, plans=s.pack_size, amount_rub=s.pack_price_rub)
+    db.add(order)
+    db.flush()
+    what = f"Наука побеждать: {s.pack_size} дополнительных разборов"
+    body = {
+        "amount": {"value": f"{order.amount_rub:.2f}", "currency": "RUB"},
+        "capture": True,
+        "confirmation": {"type": "redirect", "return_url": f"{s.base_url}/billing/pack/{order.id}"},
+        "description": what,
+        "metadata": {"pack_order_id": str(order.id)},
+        "receipt": _receipt(user.email, what, order.amount_rub),
+    }
+    r = httpx.post(f"{API}/payments", json=body, auth=_auth(), headers={"Idempotence-Key": str(uuid.uuid4())}, timeout=30)
+    r.raise_for_status()
+    p = r.json()
+    order.provider_id = p["id"]
+    order.status = p["status"]
+    db.commit()
+    return p["confirmation"]["confirmation_url"]
+
+
+def _sync_pack(db: Session, order: PackOrder) -> None:
+    r = httpx.get(f"{API}/payments/{order.provider_id}", auth=_auth(), timeout=30)
+    r.raise_for_status()
+    order.status = r.json()["status"]
+    if order.status == "succeeded" and not order.credited:
+        user = db.get(User, order.user_id)
+        user.extra_plans = (user.extra_plans or 0) + order.plans
+        order.credited = True
+    db.commit()
+
+
 def sync_payment(db: Session, provider_id: str) -> None:
     """Re-read one payment from YooKassa and apply it."""
     pay = db.scalars(select(Payment).where(Payment.provider_id == provider_id)).first()
     if not pay:
+        order = db.scalars(select(PackOrder).where(PackOrder.provider_id == provider_id)).first()
+        if order:
+            _sync_pack(db, order)
         return
     r = httpx.get(f"{API}/payments/{provider_id}", auth=_auth(), timeout=30)
     r.raise_for_status()
