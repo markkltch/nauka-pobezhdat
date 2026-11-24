@@ -6,5 +6,9 @@
   <div class="solo__card">
     {% block card %}{% endblock %}
   </div>
+  <footer class="legal-foot">
+    <span>© {{ LEGAL.short }}, ИНН {{ LEGAL.inn }}, ОГРН {{ LEGAL.ogrn }}</span>
+    <span><a href="/offer">Оферта</a> · <a href="/privacy">Персональные данные</a> · <a href="mailto:{{ LEGAL.email }}">{{ LEGAL.email }}</a></span>
+  </footer>
 </main>
 {% endblock %}

@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, files, jobs, llm, mentor, speech, yandex_id
+from . import access, auth, billing, files, jobs, legal, llm, mentor, speech, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
 from .models import LEVELS, Lesson, Member, Person, Plan, Shtab, Situation, Step, Usage, User, now
@@ -38,7 +38,8 @@ app = FastAPI(title="Наука побеждать", docs_url=None, redoc_url=No
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.globals.update(LEVELS=LEVELS, settings=get_settings, yandex_id_enabled=yandex_id.enabled,
-                             OUTCOMES=mentor.OUTCOMES, BRAND="Наука побеждать · Штаб")
+                             OUTCOMES=mentor.OUTCOMES, BRAND="Наука побеждать · Штаб",
+                             LEGAL=legal.OPERATOR, PROCESSORS=legal.PROCESSORS, EDITION=legal.EDITION)
 
 
 def _ru_date(d: dt.date | None) -> str:
@@ -676,9 +677,26 @@ def shtab_join(invite_token: str, user: User = Depends(auth.require_user), db: S
 
 @app.get("/billing", response_class=HTMLResponse)
 def billing_page(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    from .models import Subscription
+
     owned = db.scalars(select(Shtab).where(Shtab.owner_id == user.id)).all()
-    return page(request, "billing.html", user=user, owned=owned, plan=access.summary(db, user),
-                enabled=get_settings().billing_enabled)
+    subs = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.status == "active",
+                                                Subscription.paid_until > now())).all()
+    return page(request, "billing.html", user=user, owned=owned, plan=access.summary(db, user), subs=subs,
+                shtab_names={sh.id: sh.name for sh in owned}, enabled=get_settings().billing_enabled)
+
+
+@app.post("/billing/cancel/{sub_id}")
+def billing_cancel(sub_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """Stop auto-renewal; the paid period stays."""
+    from .models import Subscription
+
+    sub = db.get(Subscription, sub_id)
+    if not sub or sub.payer_id != user.id:
+        raise HTTPException(404)
+    sub.payment_method_id = ""
+    db.commit()
+    return see_other("/billing")
 
 
 @app.post("/billing/pack")

@@ -109,7 +109,42 @@ def test_limit_and_admin(client):
     assert client.get("/admin").status_code == 404
 
 
-def test_reminders(client):
+def test_reminders(client, monkeypatch):
+    from app import jobs
     from app.jobs import send_reminders
+    monkeypatch.setattr(jobs, "daytime", lambda: True)  # reminders go out only 8:00–21:00 MSK
     with SessionLocal() as db:
         assert send_reminders(db) >= 1
+
+
+def test_legal_pages_name_operator(client):
+    for p in ("/offer", "/privacy", "/consent"):
+        t = client.get(p).text
+        assert "9710113703" in t and "Открытый гуманитарный институт" in t
+        assert "[ИНН]" not in t and "[ПОЛНОЕ" not in t and "Черновик" not in t
+    assert "ЯНДЕКС.ОБЛАКО" in client.get("/consent").text
+    client.cookies.clear()
+    login = client.get("/login").text
+    assert "/consent" in login and "оферты" in login
+
+
+def test_cancel_autorenew(client):
+    import datetime as dt
+
+    from app.models import Subscription, User
+
+    sign_in(client, "renew@example.ru")
+    with SessionLocal() as db:
+        u = db.scalars(select(User).where(User.email == "renew@example.ru")).one()
+        sub = Subscription(payer_id=u.id, seats=1, status="active", payment_method_id="pm_1",
+                           paid_until=dt.datetime.now(dt.UTC).replace(tzinfo=None) + dt.timedelta(days=20))
+        db.add(sub)
+        db.commit()
+        sid = sub.id
+    assert "Отключить автопродление" in client.get("/billing").text
+    r = client.post(f"/billing/cancel/{sid}", follow_redirects=False)
+    assert r.status_code == 303
+    with SessionLocal() as db:
+        s = db.get(Subscription, sid)
+        assert s.payment_method_id == "" and s.status == "active"
+    assert "Автопродление отключено" in client.get("/billing").text

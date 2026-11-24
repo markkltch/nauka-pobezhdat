@@ -31,6 +31,19 @@
   </section>
 </div>
 
+{% for sub in subs %}
+<section class="pack">
+  <h2>{% if sub.shtab_id %}Штаб «{{ shtab_names.get(sub.shtab_id, '') }}»{% else %}Личный доступ{% endif %}</h2>
+  <p class="muted">Оплачено до {{ sub.paid_until.strftime('%d.%m.%Y') }}, {{ sub.seats|plural('место', 'места', 'мест') }}.
+    {% if sub.payment_method_id %}Продлится автоматически.{% else %}Автопродление отключено.{% endif %}</p>
+  {% if sub.payment_method_id %}
+  <form method="post" action="/billing/cancel/{{ sub.id }}" class="form-stack">
+    <button class="btn btn--secondary" type="submit">Отключить автопродление</button>
+  </form>
+  {% endif %}
+</section>
+{% endfor %}
+
 {% if enabled %}
   {% if plan.tier == 'pro' %}
   <section class="pack">
@@ -47,7 +60,7 @@
     <button class="btn btn--secondary" type="submit">Полный доступ для штаба «{{ sh.name }}»: {{ sh.members|length }} чел., {{ (sh.members|length * settings().price_per_seat_rub)|rub }} в месяц</button>
   </form>
   {% endfor %}
-  <p class="small muted">Оплата картой или через СБП в ЮKassa. Полный доступ продлевается раз в месяц, отменить можно в любой момент письмом в поддержку.</p>
+  <p class="small muted">Оплата картой или через СБП в ЮKassa. Полный доступ продлевается раз в 30 дней; автопродление можно отключить здесь в любой момент, оплаченный период сохранится. Условия — в <a href="/offer">оферте</a>.</p>
 {% elif not settings().free_beta %}
   <p class="small muted">Оплата скоро включится. Напишите нам, и мы откроем полный доступ вручную.</p>
 {% endif %}

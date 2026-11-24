@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     # YooKassa
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
-    yookassa_vat_code: int = 1  # 1 = без НДС (УСН); change when VAT applies
+    yookassa_vat_code: int = 1  # 1 = без НДС. У ОГИ ОСНО (есть филиал): если НДС не освобождён, нужна ставка 22% — код по справочнику ЮKassa
 
     @property
     def admins(self) -> set[str]:
