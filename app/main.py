@@ -113,28 +113,63 @@ def consent(request: Request):
 
 # ---------- sign-in ----------
 
+LOGIN_ERRORS = {
+    "consent": "Чтобы зарегистрироваться через Яндекс, отметьте согласие на обработку данных.",
+    "failed": "Не получилось войти через Яндекс. Попробуйте ещё раз или войдите по почте.",
+    "noacc": "Аккаунта с этим Яндекс ID ещё нет. Зарегистрируйтесь — это займёт минуту.",
+}
+
+
 @app.get("/login", response_class=HTMLResponse)
-def login_form(request: Request, next: str = "/app", mode: str = "code", yerr: str = "",
+def login_form(request: Request, next: str = "/app", mode: str = "password", yerr: str = "", email: str = "",
                user: User | None = Depends(auth.current_user)):
     if user:
         return see_other(safe_next(next))
-    error = {"consent": "Чтобы войти через Яндекс, отметьте согласие на обработку данных.",
-             "failed": "Не получилось войти через Яндекс. Попробуйте ещё раз или войдите по коду."}.get(yerr, "")
-    return page(request, "login.html", next=safe_next(next), step="password" if mode == "password" else "email",
-                error=error)
+    return page(request, "login.html", next=safe_next(next), tab="login",
+                step="email" if mode == "code" else "password", error=LOGIN_ERRORS.get(yerr, ""), email=email)
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_form(request: Request, next: str = "/app", yerr: str = "", email: str = "",
+                  user: User | None = Depends(auth.current_user)):
+    if user:
+        return see_other(safe_next(next))
+    return page(request, "login.html", next=safe_next(next), tab="register", step="register",
+                error=LOGIN_ERRORS.get(yerr, ""), email=email)
+
+
+@app.post("/register", response_class=HTMLResponse)
+def register_send(request: Request, email: str = Form(...), name: str = Form(""), password: str = Form(""),
+                  consent: str = Form(""), next: str = Form("/app"), db: Session = Depends(get_db)):
+    email, name = auth.normalize_email(email), name.strip()
+    again = dict(next=safe_next(next), tab="register", step="register", email=email, full_name=name)
+    if "@" not in email or "." not in email.split("@")[-1]:
+        return page(request, "login.html", error="Проверьте адрес почты", **again)
+    if not name:
+        return page(request, "login.html", error="Напишите, как к вам обращаться", **again)
+    if problem := auth.password_problem(password):
+        return page(request, "login.html", error=problem, **again)
+    if not consent:
+        return page(request, "login.html", error="Без согласия на обработку данных зарегистрироваться нельзя", **again)
+    if auth.account_exists(db, email):
+        return page(request, "login.html", exists=True, **again)
+    auth.start_login(db, email, safe_next(next), name=name, password=password)
+    return page(request, "login.html", next=safe_next(next), tab="register", step="code", email=email)
 
 
 @app.post("/login", response_class=HTMLResponse)
 def login_send(request: Request, email: str = Form(...), consent: str = Form(""), next: str = Form("/app"),
                db: Session = Depends(get_db)):
+    """Code by mail. An existing account just gets a code; a new address needs the consent box
+    (sign-up without a password)."""
     email = auth.normalize_email(email)
+    again = dict(next=safe_next(next), tab="login", step="email", email=email)
     if "@" not in email or "." not in email.split("@")[-1]:
-        return page(request, "login.html", next=safe_next(next), step="email", error="Проверьте адрес почты", email=email)
-    if not consent:
-        return page(request, "login.html", next=safe_next(next), step="email", email=email,
-                    error="Без согласия на обработку данных войти нельзя")
+        return page(request, "login.html", error="Проверьте адрес почты", **again)
+    if not auth.account_exists(db, email) and not consent:
+        return page(request, "login.html", noacc=True, **again)
     auth.start_login(db, email, safe_next(next))
-    return page(request, "login.html", next=safe_next(next), step="code", email=email)
+    return page(request, "login.html", next=safe_next(next), tab="login", step="code", email=email)
 
 
 def _signed_in(db: Session, user: User, next_url: str) -> RedirectResponse:
@@ -152,10 +187,10 @@ def _signed_in(db: Session, user: User, next_url: str) -> RedirectResponse:
 
 @app.post("/login/code", response_class=HTMLResponse)
 def login_code(request: Request, email: str = Form(...), code: str = Form(...), next: str = Form("/app"),
-               db: Session = Depends(get_db)):
+               tab: str = Form("login"), db: Session = Depends(get_db)):
     user = auth.check_code(db, email, code)
     if not user:
-        return page(request, "login.html", next=safe_next(next), step="code", email=email,
+        return page(request, "login.html", next=safe_next(next), step="code", email=email, tab=tab,
                     error="Код не подошёл или устарел. Проверьте письмо или запросите новый.")
     return _signed_in(db, user, safe_next(next))
 
@@ -200,7 +235,7 @@ def login_password(request: Request, email: str = Form(...), password: str = For
                    db: Session = Depends(get_db)):
     user, error = auth.check_password(db, email, password)
     if not user:
-        return page(request, "login.html", next=safe_next(next), step="password", email=email, error=error)
+        return page(request, "login.html", next=safe_next(next), tab="login", step="password", email=email, error=error)
     return _signed_in(db, user, safe_next(next))
 
 
@@ -209,10 +244,8 @@ def yandex_start(next: str = "/app", consent: str = "", link: str = "",
                  user: User | None = Depends(auth.current_user)):
     if not yandex_id.enabled():
         return see_other("/login")
-    if not user and not consent:
-        return see_other(f"/login?next={quote(safe_next(next))}&yerr=consent")
     state = auth_token()
-    mode = "link" if (link and user) else "login"
+    mode = "link" if (link and user) else ("register" if consent else "login")
     resp = see_other(yandex_id.authorize_url(state))
     resp.set_cookie("ya_state", f"{state}|{mode}|{safe_next(next)}", max_age=600, httponly=True, samesite="lax",
                     secure=get_settings().base_url.startswith("https://"))
@@ -244,6 +277,10 @@ def yandex_callback(request: Request, code: str = "", state: str = "", error: st
         if not found:
             found = db.scalars(select(User).where(User.email == prof["email"])).first()
         if not found:
+            if mode != "register":  # signing in, not up: the consent box is on the sign-up form
+                resp = see_other(f"/register?yerr=noacc&email={quote(prof['email'])}&next={quote(safe_next(next_url))}")
+                resp.delete_cookie("ya_state")
+                return resp
             found = User(email=prof["email"], name=prof["name"][:120])
             db.add(found)
         found.yandex_id = prof["id"]

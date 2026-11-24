@@ -142,8 +142,14 @@ def test_yandex_id(client, monkeypatch):
     monkeypatch.setattr(s, "yandex_oauth_client_secret", "secret")
     client.cookies.clear()
     assert "Войти с Яндекс ID" in client.get("/login").text
+    # signing in with an unknown Yandex account leads to sign-up, not to a silent new account
     r = client.get("/auth/yandex?next=/app", follow_redirects=False)
-    assert "yerr=consent" in r.headers["location"]
+    state = re.search(r"state=([^&]+)", r.headers["location"]).group(1)
+    monkeypatch.setattr(yandex_id, "profile", lambda code: {"id": "778", "email": "new@yandex.ru", "name": "Анна"})
+    r = client.get(f"/auth/yandex/callback?code=abc&state={state}", follow_redirects=False)
+    assert r.headers["location"].startswith("/register?yerr=noacc")
+    with SessionLocal() as db:
+        assert db.scalars(select(User).where(User.email == "new@yandex.ru")).first() is None
     r = client.get("/auth/yandex?next=/app&consent=1", follow_redirects=False)
     assert r.headers["location"].startswith("https://oauth.yandex.ru/authorize")
     state = re.search(r"state=([^&]+)", r.headers["location"]).group(1)

@@ -1,0 +1,9 @@
+{# the Yandex button and the sign-up link under both sign-in forms #}
+{% if yandex_id_enabled() %}
+<div class="or"><span>или</span></div>
+<form method="get" action="/auth/yandex">
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="btn btn--yandex" type="submit"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M8.9 12.5V3.6h-.8c-1.5 0-2.4.8-2.4 2.1 0 1.1.5 1.7 1.5 2.4l.8.5-2.4 3.9"/></svg>Войти с Яндекс ID</button>
+</form>
+{% endif %}
+<p class="small legal-note">Нет аккаунта? <a class="link-u" href="/register?next={{ next|urlencode }}">Зарегистрироваться</a></p>

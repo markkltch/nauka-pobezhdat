@@ -111,6 +111,53 @@
   .hero h1 .mark { width: .8em; height: .8em; vertical-align: -.06em; color: var(--action); }
   /* the plan's sources line in the chat: Russian words are longer */
   .ui-chat__src { white-space: nowrap; }
+  /* sections sized by their content, not by the screen: the gaps the one-screen rhythm left are gone */
+  main > section:not(.hero) { height: auto !important; min-height: 0 !important; padding: 112px 0 !important; }
+  main > section:not(.hero) > .wrap { height: auto !important; }
+  main > section.statement { padding: 72px 0 !important; }
+  #plan { padding-top: 120px !important; }
+  main > section:not(.hero) > .wrap > .fill { flex: none !important; }
+  #plan .app.fill { height: 560px; }
+  #shtab .grid.fill { align-items: center; }
+  #shtab .frame--fill { height: 460px; min-height: 0; }
+  /* white UI panels on the carmine frame keep dark ink */
+  .frame--lit .ui { --fx-bg: #ffffff; --fx-surface: #f4eee2; --fx-ink: #12201a; --fx-muted: #5a5a50; --fx-accent: #a8142f; --fx-accent-ink: #fffdf8; color: #12201a; }
+  @media (max-width: 639px) { main > section:not(.hero) { padding: 72px 0 !important; } main > section.statement { padding: 48px 0 !important; } #plan .app.fill { height: 460px; } #shtab .frame--fill { height: 380px; } }
+
+  /* tariffs */
+  .price-head { max-width: 760px; }
+  .price-head .t-lead { margin-top: var(--s-4); }
+  .tariffs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); margin-top: var(--s-7); }
+  .tcard { display: flex; flex-direction: column; gap: var(--s-4); padding: 28px; background: var(--p-surface); border: 1px solid rgb(18 32 26 / .1); border-radius: 20px; }
+  .tcard.is-featured { border-color: var(--p-accent); box-shadow: inset 0 0 0 1px var(--p-accent); }
+  .tcard h3 { display: flex; align-items: center; gap: 10px; font: 500 20px/1.3 var(--font-text); }
+  .tcard__badge { font: 500 12px/1 var(--font-text); padding: 5px 8px; border-radius: 6px; background: rgb(168 20 47 / .09); color: var(--p-accent); }
+  .tcard__for { color: var(--p-muted); margin-top: -8px; }
+  .nav__actions { display: flex; align-items: center; gap: 20px; }
+  .actionbar { display: flex; gap: 8px; } .actionbar .btn { flex: 1; }
+  .tcard__price { display: flex; align-items: baseline; gap: 8px; margin: 4px 0; }
+  .tcard__price .t-stat { font-size: clamp(36px, 2vw + 20px, 48px); }
+  .tcard .btn { width: 100%; }
+  .tcard__list { list-style: none; margin: 8px 0 0; padding: 16px 0 0; border-top: 1px solid rgb(18 32 26 / .08); display: grid; gap: 12px; }
+  .tcard__list li { position: relative; padding-left: 26px; line-height: 1.45; }
+  .tcard__list li::before { content: ""; position: absolute; left: 2px; top: 5px; width: 12px; height: 7px; border-left: 2px solid var(--p-accent); border-bottom: 2px solid var(--p-accent); transform: rotate(-45deg); }
+  .tcard__list b { font-weight: 600; }
+  .stepper { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 48px; padding: 4px; border-radius: 12px; background: rgb(18 32 26 / .05); }
+  .stepper__btn { width: 40px; height: 40px; border: 0; border-radius: 9px; background: var(--p-surface); color: var(--p-ink); font: 500 20px/1 var(--font-text); cursor: pointer; box-shadow: 0 1px 2px rgb(18 32 26 / .12); }
+  .stepper__btn:disabled { opacity: .4; cursor: default; }
+  .stepper__val { font-size: 15px; color: var(--p-muted); text-align: center; }
+  .stepper__val b { color: var(--p-ink); font-weight: 600; }
+  .tcmp-wrap { margin-top: var(--s-8); overflow-x: auto; }
+  .tcmp { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .tcmp caption { text-align: left; font: 500 20px/1.3 var(--font-text); padding-bottom: 16px; }
+  .tcmp th, .tcmp td { padding: 14px 12px; border-bottom: 1px solid rgb(18 32 26 / .09); text-align: center; vertical-align: top; }
+  .tcmp thead th { font-weight: 600; font-size: 14px; color: var(--p-muted); }
+  .tcmp tbody th { text-align: left; font-weight: 400; width: 46%; padding-left: 0; }
+  .tcmp td { color: var(--p-ink); white-space: nowrap; }
+  .tcmp-wrap > p { margin-top: 16px; }
+  .tcmp-wrap a { text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 1023px) { .tariffs { grid-template-columns: minmax(0, 1fr); max-width: 560px; } }
+  @media (max-width: 639px) { .tcard { padding: 22px; } .tcmp { font-size: 14px; } .tcmp th, .tcmp td { padding: 12px 6px; } .tcmp td { white-space: normal; } }
 </style>
 </head>
 <body>
@@ -159,7 +206,8 @@
       <div class="nav__item"><a class="nav__link" href="#faq">Вопросы</a></div>
     </nav>
     <div class="nav__actions">
-      <a class="btn btn--primary" href="/login">Начать разбор</a>
+      <a class="nav__link nav__signin" href="/login">Войти</a>
+      <a class="btn btn--primary" href="/register">Начать бесплатно</a>
     </div>
     <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Меню">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -171,14 +219,14 @@
   <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text">
       <div class="hero__c">
-        <a class="pill" href="#method"><span>По методу А. В. Суворова</span><span class="muted">Веб, MAX и Telegram</span></a>
+        <a class="pill" href="#method"><span>По методу А. В. Суворова</span><span class="muted">В браузере, на компьютере и телефоне</span></a>
         <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ-наставник для руководителей</h1>
         <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. 1 500 ₽ в месяц.</p>
-        <div class="btn-row"><a class="btn btn--primary" href="/login">Начать разбор</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
+        <div class="btn-row"><a class="btn btn--primary" href="/register">Начать бесплатно</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
       </div>
       <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="7" role="img" aria-label="Наставник отвечает руководителю планом из трёх шагов на 21 день">
         <div class="ly-piece d-win" aria-hidden="true">
-          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Иван Петров</b> · начальник отдела</span><span class="sp"></span><span>Веб · MAX</span></div>
+          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Иван Петров</b> · начальник отдела</span><span class="sp"></span><span>Веб</span></div>
           <div class="d-win__body">
             <div class="inbox">
               <div class="q">Поиск</div>
@@ -358,7 +406,7 @@
           <h2 id="shtab-h">Штаб для вашей команды</h2>
           <p class="t-lead">Пригласите заместителей и руководителей отделов. Задачи из плана уходят исполнителям одной кнопкой.</p>
           <ul class="stack-3" style="margin:0;padding:0;list-style:none">
-            <li>Приглашение по ссылке в веб, MAX или Telegram</li>
+            <li>Приглашение участников по ссылке</li>
             <li>Общие задачи, исполнители и сроки</li>
             <li>Подсказка, где горит срок</li>
           </ul>
@@ -382,50 +430,71 @@
     </div>
   </section>
 
-  <section class="section" id="price" style="--hm: 2" aria-labelledby="price-h">
+  <section class="section" id="price" aria-labelledby="price-h">
     <div class="wrap">
-      <div class="grid fill">
-        <div class="span-4 stack-4">
-          <h2 id="price-h">Цена</h2>
-          <p class="muted">Одна цена за человека: для себя и для штаба.</p>
-          <ul class="stack-3" style="margin:0;padding:0;list-style:none">
-            <li>Разбор ситуаций и планы</li>
-            <li>Напоминания о сроках</li>
-            <li>Веб, MAX и Telegram</li>
-          </ul>
-          <p><a class="link" href="#faq">Прочитать ответы о цене</a></p>
-          <div class="panel frame--lit" style="--p-h: 200px">
-            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:20px;--ay:24px">
-              <div class="ui ui-notify" data-ui="notify">
-                <ul class="ui-notify__list" data-notify-list>
-                  <li class="ui-note"><span class="ui-agent ui-note__av" aria-hidden="true"></span><span class="ui-note__text"><span class="ui-note__title">Счёт штаба «Линия 2»<time>ноябрь</time></span><span class="ui-note__body">3 человека × 1 500 ₽ = 4 500 ₽</span></span></li>
-                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="2.5"/><path d="M3.5 13.5c.6-2.3 2.4-3.5 4.5-3.5s3.9 1.2 4.5 3.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Ковалёва вошла в штаб<time>вчера</time></span><span class="ui-note__body">По ссылке из MAX</span></span></li>
-                </ul>
-              </div>
-            </div></div>
-          </div>
-        </div>
-        <article class="card card--plan span-4 start-5">
-          <h3>Для себя</h3>
-          <p class="muted">Один руководитель</p>
-          <p class="price"><span class="t-stat">1 500 ₽</span><span class="t-small muted">в месяц</span></p>
-          <a class="btn btn--secondary" href="/login">Начать одному</a>
-          <ul>
-            <li>Личный наставник</li>
-            <li>История всех ситуаций</li>
+      <div class="section-head price-head">
+        <h2 id="price-h">Тарифы</h2>
+        <p class="t-lead muted">Начните бесплатно. Полный доступ стоит 1 500 ₽ в месяц за руководителя — одному или всем штабом. Цена за человека одна: в штабе вы просто платите за всех одним счётом.</p>
+      </div>
+      <div class="tariffs">
+        <article class="tcard">
+          <h3>Бесплатно</h3>
+          <p class="tcard__for">Попробовать метод на своих задачах</p>
+          <p class="tcard__price"><span class="t-stat">0 ₽</span><span class="muted">без срока</span></p>
+          <a class="btn btn--secondary" href="/register">Начать бесплатно</a>
+          <ul class="tcard__list">
+            <li><b>3 разбора</b> ситуаций в месяц</li>
+            <li><b>5 голосовых</b> сообщений в месяц</li>
+            <li>Все режимы наставника: план, подготовка разговора, разбор после дела</li>
+            <li>Штаб и общие задачи без ограничений</li>
           </ul>
         </article>
-        <article class="card card--plan is-featured span-4 start-9">
+        <article class="tcard is-featured">
+          <h3>Полный <span class="tcard__badge">для руководителя</span></h3>
+          <p class="tcard__for">Разбирать ситуации каждую неделю</p>
+          <p class="tcard__price"><span class="t-stat">1 500 ₽</span><span class="muted">в месяц</span></p>
+          <a class="btn btn--primary" href="/register?next=/billing">Подключить</a>
+          <ul class="tcard__list">
+            <li><b>30 разборов</b> ситуаций в месяц</li>
+            <li><b>30 голосовых</b> сообщений в месяц</li>
+            <li>Память о людях и уроках из прошлых разборов</li>
+            <li>Нужно больше — <b>+10 разборов за 590 ₽</b>, не сгорают</li>
+          </ul>
+        </article>
+        <article class="tcard">
           <h3>Штаб</h3>
-          <p class="muted">Команда руководителей</p>
-          <p class="price"><span class="t-stat">1 500 ₽</span><span class="t-small muted">в месяц за человека</span></p>
-          <a class="btn btn--primary" href="/login">Начать разбор</a>
-          <ul>
-            <li>Наставник у каждого</li>
-            <li>Общие задачи и сроки</li>
-            <li>Один счёт на команду</li>
+          <p class="tcard__for">Полный доступ для каждого в команде</p>
+          <p class="tcard__price"><span class="t-stat" data-shtab-total>4 500 ₽</span><span class="muted">в месяц</span></p>
+          <div class="stepper" role="group" aria-label="Сколько человек в штабе">
+            <button type="button" class="stepper__btn" data-shtab-step="-1" aria-label="Меньше">−</button>
+            <span class="stepper__val"><b data-shtab-n>3</b> <span data-shtab-word>руководителя</span> × 1 500 ₽</span>
+            <button type="button" class="stepper__btn" data-shtab-step="1" aria-label="Больше">+</button>
+          </div>
+          <a class="btn btn--secondary" href="/register?next=/shtab">Собрать штаб</a>
+          <ul class="tcard__list">
+            <li>У каждого участника — всё из «Полного»</li>
+            <li>Глава штаба платит за всех одним счётом</li>
+            <li>Участники входят по ссылке-приглашению</li>
+            <li>Оплата картой, через СБП или по счёту для организации</li>
           </ul>
         </article>
+      </div>
+      <div class="tcmp-wrap">
+        <table class="tcmp">
+          <caption>Что входит</caption>
+          <thead><tr><th scope="col"></th><th scope="col">Бесплатно</th><th scope="col">Полный</th><th scope="col">Штаб</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Разборов ситуаций в месяц</th><td>3</td><td>30</td><td>30 у каждого</td></tr>
+            <tr><th scope="row">Голосовых сообщений в месяц, до 30 секунд</th><td>5</td><td>30</td><td>30 у каждого</td></tr>
+            <tr><th scope="row">План: обстановка, причина, шаги, риски, сроки</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Подготовка трудного разговора и разбор после дела</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Файлы к ситуации: Word, PDF, текст, CSV</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Приказ для печати, шаги в календарь, напоминания</th><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Дополнительные разборы: 10 за 590 ₽</th><td>—</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Один счёт на команду, оплата по счёту</th><td>—</td><td>—</td><td>✓</td></tr>
+          </tbody>
+        </table>
+        <p class="t-small muted">Доступ продлевается каждые 30 дней, автопродление отключается в любой момент. Условия — в <a href="/offer">оферте</a>.</p>
       </div>
     </div>
   </section>
@@ -440,9 +509,9 @@
         <div class="faq span-6 start-7">
           <div class="faq__item"><h3>Чем это отличается от обычного чат-бота?</h3><p>Наставник не отвечает общими словами. Сначала уточняет обстановку, потом даёт план с исполнителями и сроками.</p></div>
           <div class="faq__item"><h3>Для какого уровня руководителя?</h3><p>Для любого: от мастера участка до генерального директора. Ответы подстраиваются под ваш уровень.</p></div>
-          <div class="faq__item"><h3>Где работает наставник?</h3><p>В браузере, в MAX и в Telegram.</p></div>
-          <div class="faq__item"><h3>Как оплатить штаб?</h3><p>Глава штаба платит за всех: 1 500 ₽ в месяц за каждого человека.</p></div>
-          <div class="faq__item"><h3>Где хранятся данные?</h3><p>На серверах в России.</p></div>
+          <div class="faq__item"><h3>Где работает наставник?</h3><p>В браузере на компьютере и телефоне, устанавливать ничего не нужно. Ситуацию можно описать текстом, голосом или приложить файл.</p></div>
+          <div class="faq__item"><h3>Как оплатить штаб?</h3><p>Глава штаба платит за всех одним платежом: 1 500 ₽ в месяц за каждого участника. Организация может оплатить по счёту.</p></div><div class="faq__item"><h3>Можно ли отменить подписку?</h3><p>Да, автопродление отключается в разделе «Тариф» в любой момент. Оплаченный месяц доработает до конца.</p></div>
+          <div class="faq__item"><h3>Где хранятся данные?</h3><p>На серверах в России. Ваши ситуации не используются для обучения моделей. Сервис предоставляет АНО ВО «Открытый гуманитарный институт».</p></div>
         </div>
       </div>
     </div>
@@ -454,9 +523,9 @@
     <div class="closing__cta close--type">
       <div class="section-head">
         <h2 id="close-h">Разберите первую ситуацию сегодня</h2>
-        <p class="t-small muted">1 500 ₽ в месяц за человека.</p>
+        <p class="t-small muted">Бесплатно — 3 разбора в месяц. Полный доступ — 1 500 ₽ в месяц.</p>
       </div>
-      <a class="btn btn--primary btn--xl btn--wide" href="/login">Начать разбор<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+      <a class="btn btn--primary btn--xl btn--wide" href="/register">Начать бесплатно<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
     </div>
     <div class="closing__links">
       <div class="grid">
@@ -469,7 +538,7 @@
         <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">Вопросы</a></li></ul></div>
       </div>
       <div class="footer__legal">
-        <span>&copy; 2026 Наука побеждать &nbsp; <a href="/offer">Оферта</a> &nbsp; <a href="/privacy">Персональные данные</a></span>
+        <span>&copy; 2026 АНО ВО «ОГИ», ИНН 9710113703, ОГРН 1237700304126 &nbsp; <a href="/offer">Оферта</a> &nbsp; <a href="/privacy">Персональные данные</a> &nbsp; <a href="mailto:info@oginst.ru">info@oginst.ru</a></span>
         <div class="socials"></div>
       </div>
     </div>
@@ -477,11 +546,26 @@
 </footer>
 
 <nav class="actionbar" aria-label="Быстрые действия">
-  <a class="btn btn--primary" href="/login">Начать разбор</a>
+  <a class="btn btn--secondary" href="/login">Войти</a>
+  <a class="btn btn--primary" href="/register">Начать бесплатно</a>
 </nav>
 
 <script type="module" src="/static/landing/assets/system.js"></script>
 <script type="module" src="/static/landing/assets/motion/motion.js"></script>
 <script type="module" src="/static/landing/assets/layout/layout.js"></script>
+<script>
+(() => {
+  const n = document.querySelector('[data-shtab-n]'); if (!n) return;
+  const total = document.querySelector('[data-shtab-total]'), word = document.querySelector('[data-shtab-word]');
+  const btns = document.querySelectorAll('[data-shtab-step]');
+  const fmt = v => v.toLocaleString('ru-RU').replace(/\u00a0|\s/g, '\u00a0') + '\u00a0₽';
+  const w = k => (k % 10 === 1 && k % 100 !== 11) ? 'руководитель' : (k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 10 || k % 100 >= 20)) ? 'руководителя' : 'руководителей';
+  let k = 3;
+  const draw = () => { n.textContent = k; word.textContent = w(k); total.textContent = fmt(k * 1500);
+    btns[0].disabled = k <= 2; btns[1].disabled = k >= 50; };
+  btns.forEach(b => b.addEventListener('click', () => { k = Math.min(50, Math.max(2, k + Number(b.dataset.shtabStep))); draw(); }));
+  draw();
+})();
+</script>
 </body>
 </html>

@@ -37,7 +37,8 @@ def test_public_pages(client):
 
 
 def test_consent_required(client):
-    r = client.post("/login", data={"email": "x@example.ru", "next": "/app"})
+    client.cookies.clear()
+    r = client.post("/register", data={"name": "Икс", "email": "x@example.ru", "password": "secret123", "next": "/app"})
     assert "согласия" in r.text
 
 
@@ -125,7 +126,8 @@ def test_legal_pages_name_operator(client):
     assert "ЯНДЕКС.ОБЛАКО" in client.get("/consent").text
     client.cookies.clear()
     login = client.get("/login").text
-    assert "/consent" in login and "оферты" in login
+    reg = client.get("/register").text
+    assert "/consent" in reg and "оферты" in reg and "/register" in login
 
 
 def test_cancel_autorenew(client):
@@ -148,3 +150,37 @@ def test_cancel_autorenew(client):
         s = db.get(Subscription, sid)
         assert s.payment_method_id == "" and s.status == "active"
     assert "Автопродление отключено" in client.get("/billing").text
+
+
+def test_register_then_password_login(client):
+    from app.models import User
+
+    client.cookies.clear()
+    page = client.get("/register").text
+    assert "Создать аккаунт" in page and "Регистрация" in page
+    # weak password and missing consent are refused before any letter goes out
+    r = client.post("/register", data={"name": "Ольга", "email": "olga@example.ru", "password": "12345678", "consent": "1"})
+    assert "буквы" in r.text
+    r = client.post("/register", data={"name": "Ольга", "email": "olga@example.ru", "password": "secret123"})
+    assert "согласия" in r.text
+    r = client.post("/register", data={"name": "Ольга", "email": "olga@example.ru", "password": "secret123", "consent": "1"})
+    assert "Подтвердите почту" in r.text
+    with SessionLocal() as db:  # nothing is stored on the account until the address is confirmed
+        assert db.scalars(select(User).where(User.email == "olga@example.ru")).first() is None
+        code = db.scalars(select(LoginCode).where(LoginCode.email == "olga@example.ru")).first().code
+    r = client.post("/login/code", data={"email": "olga@example.ru", "code": code, "tab": "register"}, follow_redirects=False)
+    assert r.headers["location"].startswith("/onboarding")
+    with SessionLocal() as db:
+        u = db.scalars(select(User).where(User.email == "olga@example.ru")).one()
+        assert u.name == "Ольга" and u.password_hash and u.consent_at
+    client.cookies.clear()
+    r = client.post("/register", data={"name": "X", "email": "olga@example.ru", "password": "secret123", "consent": "1"})
+    assert "уже зарегистрирована" in r.text
+    r = client.post("/login/password", data={"email": "olga@example.ru", "password": "secret123"}, follow_redirects=False)
+    assert r.status_code == 303
+
+
+def test_code_login_unknown_address_points_to_signup(client):
+    client.cookies.clear()
+    r = client.post("/login", data={"email": "nobody@example.ru"})
+    assert "Зарегистрироваться" in r.text and "Аккаунта с почтой" in r.text

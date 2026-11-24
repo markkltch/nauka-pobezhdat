@@ -460,3 +460,6 @@ div.start__examples { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .legal-foot{max-width:560px;margin:24px auto 8px;padding:0 16px;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:center;font-size:12px;line-height:1.5;color:var(--muted,#6b6b6b);text-align:center}
 .legal-foot a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .legal-note{margin-top:12px}
+.label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.label-row label { font: 500 var(--t-small)/1.3 var(--font-text); }
+.solo__card .seg-tabs { margin-bottom: var(--s-5); }

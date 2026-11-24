@@ -1,62 +1,87 @@
 {% extends "_card.html" %}
-{% block title %}Вход — {{ BRAND }}{% endblock %}
+{% block title %}{% if tab == "register" %}Регистрация{% else %}Вход{% endif %} — {{ BRAND }}{% endblock %}
 {% block card %}
+{% set q = "?next=" ~ (next|urlencode) %}
 {% if step == "code" %}
-  <h1>Код из письма</h1>
-  <p class="muted">Отправили на {{ email }}. Письмо приходит за минуту; если его нет — проверьте «Спам».</p>
+  <h1>{% if tab == "register" %}Подтвердите почту{% else %}Код из письма{% endif %}</h1>
+  <p class="muted">Отправили код на <b>{{ email }}</b>. Письмо приходит за минуту; если его нет — проверьте «Спам».</p>
   <form method="post" action="/login/code" class="form-stack">
     <input type="hidden" name="next" value="{{ next }}">
     <input type="hidden" name="email" value="{{ email }}">
+    <input type="hidden" name="tab" value="{{ tab or 'login' }}">
     <label for="code">Код из 6 цифр</label>
     <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <button class="btn btn--primary" type="submit">Войти</button>
+    <button class="btn btn--primary" type="submit">{% if tab == "register" %}Подтвердить и войти{% else %}Войти{% endif %}</button>
   </form>
-  <p class="small"><a class="link-u" href="/login?next={{ next|urlencode }}">Другой адрес или новый код</a></p>
+  <p class="small"><a class="link-u" href="{{ ('/register' ~ q) if tab == 'register' else ('/login?mode=code&' ~ q[1:]) }}">Изменить почту или получить новый код</a></p>
 {% else %}
-  <h1>Вход</h1>
-  <nav class="seg-tabs" aria-label="Способ входа">
-    <a href="/login?next={{ next|urlencode }}" {% if step == 'email' %}aria-current="page"{% endif %}>Код на почту</a>
-    <a href="/login?mode=password&next={{ next|urlencode }}" {% if step == 'password' %}aria-current="page"{% endif %}>Пароль</a>
+  <nav class="seg-tabs" aria-label="Вход или регистрация">
+    <a href="/login{{ q }}" {% if tab != 'register' %}aria-current="page"{% endif %}>Вход</a>
+    <a href="/register{{ q }}" {% if tab == 'register' %}aria-current="page"{% endif %}>Регистрация</a>
   </nav>
-  {% if step == "password" %}
+
+  {% if tab == "register" %}
+  <h1>Регистрация</h1>
+  <p class="muted">Бесплатно: 3 разбора в месяц, без карты.</p>
+  <form method="post" action="/register" class="form-stack" id="reg-form">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="name">Как к вам обращаться</label>
+    <input id="name" name="name" autocomplete="name" required maxlength="120" value="{{ full_name or '' }}" placeholder="Иван Петров">
+    <label for="email">Рабочая почта</label>
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-hint">
+    <p class="small muted" id="pw-hint">Не короче 8 символов, буквы и цифры.</p>
+    <label class="check"><input type="checkbox" name="consent" value="1" required id="consent">
+      <span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a></span></label>
+    {% if exists %}<p class="error" role="alert">Эта почта уже зарегистрирована. <a class="link-u" href="/login?email={{ email|urlencode }}&{{ q[1:] }}">Войти</a></p>{% endif %}
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Создать аккаунт</button>
+  </form>
+  {% if yandex_id_enabled() %}
+  <div class="or"><span>или</span></div>
+  <form method="get" action="/auth/yandex" id="ya-form">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="consent" value="" data-mirror="consent">
+    <button class="btn btn--yandex" type="submit"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M8.9 12.5V3.6h-.8c-1.5 0-2.4.8-2.4 2.1 0 1.1.5 1.7 1.5 2.4l.8.5-2.4 3.9"/></svg>Зарегистрироваться с Яндекс ID</button>
+  </form>
+  <script>
+    // the consent box above covers Yandex ID too
+    (() => { const c = document.getElementById('consent'), m = document.querySelector('[data-mirror=consent]'), f = document.getElementById('ya-form');
+      f.addEventListener('submit', e => { if (!c.checked) { e.preventDefault(); c.reportValidity(); } else m.value = '1'; }); })();
+  </script>
+  {% endif %}
+  <p class="small legal-note">Уже есть аккаунт? <a class="link-u" href="/login{{ q }}">Войти</a></p>
+  <p class="small muted">Регистрируясь, вы принимаете условия <a class="link-u" href="/offer" target="_blank">оферты</a>. Как мы обращаемся с данными — в <a class="link-u" href="/privacy" target="_blank">политике</a>.</p>
+
+  {% elif step == "email" %}
+  <h1>Вход по коду</h1>
+  <p class="muted">Пришлём на почту код из 6 цифр — пароль не нужен.</p>
+  <form method="post" action="/login" class="form-stack">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Почта</label>
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}" autofocus>
+    {% if noacc %}<p class="error" role="alert">Аккаунта с почтой {{ email }} нет. <a class="link-u" href="/register?email={{ email|urlencode }}&{{ q[1:] }}">Зарегистрироваться</a></p>{% endif %}
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Получить код</button>
+  </form>
+  <p class="small"><a class="link-u" href="/login{{ q }}">Войти с паролем</a></p>
+  {% include "_login_alt.html" %}
+
+  {% else %}
+  <h1>Вход</h1>
   <form method="post" action="/login/password" class="form-stack">
     <input type="hidden" name="next" value="{{ next }}">
     <label for="email">Почта</label>
     <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required value="{{ email or '' }}">
-    <label for="password">Пароль</label>
+    <div class="label-row"><label for="password">Пароль</label><a class="small link-u" href="/login?mode=code&{{ q[1:] }}">Забыли пароль?</a></div>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <button class="btn btn--primary" type="submit">Войти</button>
   </form>
-  <p class="small muted">Пароль задаётся в настройках после первого входа по коду. Забыли — войдите по коду и задайте новый.</p>
-  {% else %}
-  <form method="post" action="/login" class="form-stack" id="login-form">
-    <input type="hidden" name="next" value="{{ next }}">
-    <label for="email">Рабочая почта</label>
-    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
-    <label class="check"><input type="checkbox" name="consent" value="1" required id="consent">
-      <span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a></span></label>
-    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <button class="btn btn--primary" type="submit">Получить код</button>
-  </form>
+  <p class="small"><a class="link-u" href="/login?mode=code&{{ q[1:] }}">Войти по коду из письма</a></p>
+  {% include "_login_alt.html" %}
   {% endif %}
-  {% if yandex_id_enabled() %}
-  <div class="or"><span>или</span></div>
-  <form method="get" action="/auth/yandex" class="form-stack" id="ya-form">
-    <input type="hidden" name="next" value="{{ next }}">
-    {% if step == 'password' %}<label class="check"><input type="checkbox" name="consent" value="1" required>
-      <span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a></span></label>
-    {% else %}<input type="hidden" name="consent" value="" data-mirror="consent">{% endif %}
-    <button class="btn btn--yandex" type="submit"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M8.9 12.5V3.6h-.8c-1.5 0-2.4.8-2.4 2.1 0 1.1.5 1.7 1.5 2.4l.8.5-2.4 3.9"/></svg>Войти с Яндекс ID</button>
-  </form>
-  <script>
-    // the consent box above also covers Yandex ID
-    (() => { const c = document.getElementById('consent'), m = document.querySelector('[data-mirror=consent]'), f = document.getElementById('ya-form');
-      if (!c || !m) return;
-      f.addEventListener('submit', e => { if (!c.checked) { e.preventDefault(); c.reportValidity(); } else m.value = '1'; }); })();
-  </script>
-  {% endif %}
-  <p class="small muted legal-note">Входя в сервис, вы принимаете условия <a href="/offer" target="_blank">оферты</a>. Как мы обращаемся с данными — в <a href="/privacy" target="_blank">политике</a>.</p>
 {% endif %}
 {% endblock %}

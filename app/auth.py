@@ -28,26 +28,53 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-def start_login(db: Session, email: str, next_url: str = "/app") -> None:
+def start_login(db: Session, email: str, next_url: str = "/app", name: str = "", password: str = "") -> None:
+    """Mails a one-time code. With name/password it is a sign-up: they are kept with the code and
+    reach the account only once the code proves the address."""
     email = normalize_email(email)
+    pending_pw = hash_password(password) if password else ""
     recent = db.scalars(
         select(LoginCode).where(LoginCode.email == email, LoginCode.used.is_(False),
                                 LoginCode.created_at > now() - dt.timedelta(minutes=1))
     ).first()
     if recent:  # one letter a minute per address; the code already sent still works
+        if name or pending_pw:
+            recent.pending_name, recent.pending_password = name[:120], pending_pw
+            db.commit()
         return
     code = f"{secrets.randbelow(10**6):06d}"
-    row = LoginCode(email=email, code=code, expires_at=now() + CODE_TTL)
+    row = LoginCode(email=email, code=code, expires_at=now() + CODE_TTL, pending_name=name[:120],
+                    pending_password=pending_pw)
     db.add(row)
     db.commit()
     link = f"{get_settings().base_url}/login/link/{row.link_token}?next={next_url}"
+    if name or pending_pw:
+        subject, lead = f"Подтвердите почту: {code}", "Код для подтверждения регистрации"
+        tail = "Если вы не регистрировались, просто удалите это письмо."
+    else:
+        subject, lead = f"Код входа: {code}", "Ваш код для входа"
+        tail = "Если вы не запрашивали вход, просто удалите это письмо."
     mailer.send(
         email,
-        f"Код входа: {code}",
-        f"Ваш код для входа в «Наука побеждать»: {code}\n\n"
+        subject,
+        f"{lead} в «Наука побеждать · Штаб»: {code}\n\n"
         f"Или откройте ссылку: {link}\n\n"
-        "Код действует 15 минут. Если вы не запрашивали вход, просто удалите это письмо.",
+        f"Код действует 15 минут. {tail}",
     )
+
+
+def _apply_pending(db: Session, user: User, row: LoginCode) -> User:
+    if row.pending_name and not user.name:
+        user.name = row.pending_name
+    if row.pending_password and not user.password_hash:
+        user.password_hash = row.pending_password
+        user.failed_logins, user.locked_until = 0, None
+    db.commit()
+    return user
+
+
+def account_exists(db: Session, email: str) -> bool:
+    return db.scalars(select(User.id).where(User.email == normalize_email(email))).first() is not None
 
 
 def _user_for(db: Session, email: str) -> User:
@@ -74,7 +101,7 @@ def check_code(db: Session, email: str, code: str) -> User | None:
         return None
     row.used = True
     db.commit()
-    return _user_for(db, email)
+    return _apply_pending(db, _user_for(db, email), row)
 
 
 def check_link(db: Session, link_token: str) -> User | None:
@@ -85,7 +112,7 @@ def check_link(db: Session, link_token: str) -> User | None:
         return None
     row.used = True
     db.commit()
-    return _user_for(db, row.email)
+    return _apply_pending(db, _user_for(db, row.email), row)
 
 
 def open_session(db: Session, user: User) -> AuthSession:

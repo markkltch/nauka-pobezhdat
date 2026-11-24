@@ -62,6 +62,9 @@ class LoginCode(Base):
     link_token: Mapped[str] = mapped_column(String(64), default=token, index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     used: Mapped[bool] = mapped_column(Boolean, default=False)
+    # registration: applied to the account only after the address is confirmed
+    pending_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    pending_password: Mapped[str] = mapped_column(String(255), default="", server_default="")
     expires_at: Mapped[dt.datetime] = mapped_column(DateTime)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
