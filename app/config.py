@@ -18,11 +18,15 @@ class Settings(BaseSettings):
     free_beta: bool = True  # everyone gets the full plan without payment until billing is live
     monthly_plan_limit: int = 30  # разборов per paid person per month
     free_plans_per_month: int = 3  # разборов per month on the free plan
-    budget_per_situation_rub: float = 4.8  # hard cap on model spend for one разбор (estimated before each call)
+    budget_per_situation_rub: float = 4.4  # hard cap on model spend for one разбор (estimated before each call)
     messages_per_situation: int = 24  # hard cap on messages in one conversation
     price_per_seat_rub: int = 1500
     pack_size: int = 10  # extra разборов in one pack, for paid users
     pack_price_rub: int = 590
+    voice_per_month: int = 30  # голосовых в месяц на полном тарифе
+    voice_free_per_month: int = 5
+    voice_max_seconds: int = 30
+    price_voice_per_15s: float = 0.2  # SpeechKit, ₽ за 15 с, оценка с запасом
 
     # mail (SMTP). Empty host = codes and reminders go to the log (development)
     smtp_host: str = ""
@@ -54,9 +58,12 @@ class Settings(BaseSettings):
     price_light_out_per_1k: float = 0.2
     price_strong_in_per_1k: float = 0.5
     price_strong_out_per_1k: float = 1.2
-    chars_per_token_estimate: float = 2.5  # conservative, for the budget check before a call
+    chars_per_token_estimate: float = 3.2  # measured ≈3.8 for Russian on Alice AI  # conservative, for the budget check before a call
+    yandex_speech_api_key: str = ""  # ключ с областью yc.ai.speechkitStt.execute; пусто — берём yandex_api_key
+    yandex_oauth_client_id: str = ""  # вход через Яндекс ID
+    yandex_oauth_client_secret: str = ""
     max_out_questions: int = 400
-    max_out_plan: int = 1200
+    max_out_plan: int = 1400
     max_out_talk: int = 600
 
     # YooKassa

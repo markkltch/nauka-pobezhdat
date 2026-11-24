@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import secrets
 
 from fastapi import Depends, HTTPException, Request
@@ -114,3 +115,62 @@ def require_admin(user: User = Depends(require_user)) -> User:
     if user.email not in get_settings().admins:
         raise HTTPException(status_code=404)
     return user
+
+
+# ---------- passwords (scrypt from the standard library; no extra packages on the hosting) ----------
+
+PW_MIN = 8
+LOCK_AFTER = 5
+LOCK_FOR = dt.timedelta(minutes=15)
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+    return f"scrypt${salt.hex()}${digest.hex()}"
+
+
+def _verify(password: str, stored: str) -> bool:
+    try:
+        _, salt, digest = stored.split("$")
+        got = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1, dklen=32)
+        return secrets.compare_digest(got.hex(), digest)
+    except (ValueError, TypeError):
+        return False
+
+
+def password_problem(password: str) -> str:
+    if len(password) < PW_MIN:
+        return f"Пароль короче {PW_MIN} символов"
+    if password.isdigit() or password.isalpha():
+        return "Добавьте в пароль и буквы, и цифры"
+    return ""
+
+
+def check_password(db: Session, email: str, password: str) -> tuple[User | None, str]:
+    """Returns (user, error). Five wrong passwords lock the account for 15 minutes."""
+    user = db.scalars(select(User).where(User.email == normalize_email(email))).first()
+    if not user or not user.password_hash:
+        return None, "Неверная почта или пароль. Если пароль не задан — войдите по коду и задайте его в настройках."
+    if user.locked_until and user.locked_until > now():
+        return None, "Слишком много попыток. Подождите 15 минут или войдите по коду из письма."
+    if not _verify(password, user.password_hash):
+        user.failed_logins = (user.failed_logins or 0) + 1
+        if user.failed_logins >= LOCK_AFTER:
+            user.locked_until, user.failed_logins = now() + LOCK_FOR, 0
+        db.commit()
+        return None, "Неверная почта или пароль."
+    user.failed_logins, user.locked_until = 0, None
+    db.commit()
+    return user, ""
+
+
+def end_other_sessions(db: Session, user: User, keep: str | None) -> int:
+    rows = db.scalars(select(AuthSession).where(AuthSession.user_id == user.id)).all()
+    n = 0
+    for r in rows:
+        if r.id != keep:
+            db.delete(r)
+            n += 1
+    db.commit()
+    return n

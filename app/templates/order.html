@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приказ · {{ plan.title }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #12201a; --muted: #5b5b52; --line: #d8cfbd; --carmine: #a8142f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9e2d4; font: 400 15px/1.5 "Onest", system-ui, sans-serif; color: var(--ink); }
+  .sheet { max-width: 210mm; min-height: 297mm; margin: 24px auto; padding: 20mm 18mm; background: #fffdf8; box-shadow: 0 10px 40px rgb(0 0 0 / .12); }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--carmine); }
+  .top b { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--carmine); }
+  .top span { font-size: 13px; color: var(--muted); }
+  h1 { margin: 22px 0 4px; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; text-align: center; }
+  .sub { margin: 0 0 22px; text-align: center; color: var(--muted); }
+  h2 { margin: 22px 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--carmine); }
+  p { margin: 0 0 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { font-size: 12px; font-weight: 500; color: var(--muted); }
+  td.n { width: 28px; color: var(--muted); } td.d { width: 90px; white-space: nowrap; } td.o { width: 170px; }
+  .quote { margin-top: 24px; padding: 12px 16px; border-left: 3px solid var(--carmine); background: #f6f0e4; }
+  .quote small { display: block; color: var(--muted); }
+  .sign { margin-top: 40px; display: flex; justify-content: space-between; gap: 24px; color: var(--muted); }
+  .sign span { flex: 1; border-top: 1px solid var(--ink); padding-top: 4px; font-size: 12px; }
+  .bar { max-width: 210mm; margin: 16px auto 0; display: flex; gap: 8px; justify-content: flex-end; padding: 0 8px; }
+  .bar button, .bar a { font: 500 15px/1 "Onest", sans-serif; padding: 12px 18px; border-radius: 10px; border: 0; background: var(--carmine); color: #fff; cursor: pointer; text-decoration: none; }
+  .bar a { background: #fffdf8; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  @media print { body { background: none; } .sheet { margin: 0; box-shadow: none; min-height: 0; } .bar { display: none; } @page { size: A4; margin: 14mm; } .sheet { padding: 0; } }
+  @media (max-width: 640px) { .sheet { margin: 8px; padding: 18px; min-height: 0; } td.o { width: auto; } }
+</style>
+</head>
+<body>
+<div class="bar"><a href="/app/{{ plan.situation_id }}">← К разбору</a><button type="button" onclick="print()">Печать или PDF</button></div>
+<article class="sheet">
+  <div class="top"><div><b>Наука побеждать · Штаб</b><span>{{ user.display_name }}{% if user.role %}, {{ user.role }}{% endif %}</span></div><span>{{ today.strftime('%d.%m.%Y') }}</span></div>
+  <h1>Приказ</h1>
+  <p class="sub">{{ plan.title }}</p>
+  {% if plan.scene or plan.cause %}<h2>Обстановка</h2>{% if plan.scene %}<p>{{ plan.scene }}</p>{% endif %}{% if plan.cause %}<p><b>Корень дела:</b> {{ plan.cause }}</p>{% endif %}{% endif %}
+  {% if plan.goal %}<h2>Цель</h2><p>{{ plan.goal }}</p>{% endif %}
+  {% if plan.first_day %}<h2>В ближайшие сутки</h2><p>{{ plan.first_day }}</p>{% endif %}
+  <h2>Приказываю</h2>
+  <table>
+    <thead><tr><th>№</th><th>Что сделать</th><th>Исполнитель</th><th>Срок</th></tr></thead>
+    <tbody>{% for s in plan.steps %}<tr><td class="n">{{ loop.index }}</td><td>{{ s.text }}</td><td class="o">{{ s.owner_name }}</td><td class="d">{{ s.due.strftime('%d.%m.%Y') if s.due else '' }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% if plan.risks %}<h2>Риски и меры</h2>{% for r in plan.risks %}<p><b>{{ r.risk }}.</b> {{ r.counter }}</p>{% endfor %}{% endif %}
+  {% if plan.victory %}<h2>Признак победы</h2><p>{{ plan.victory }}</p>{% endif %}
+  {% if plan.principle %}<div class="quote">«{{ plan.principle.quote }}»<small>{{ plan.principle.source }}</small></div>{% endif %}
+  <div class="sign"><span>Руководитель</span><span>С приказом ознакомлены</span></div>
+</article>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Люди и уроки — {{ BRAND }}{% endblock %}
+{% block body %}
+<div class="shell">
+  {% include "_side.html" %}
+  <main class="talk page" id="main">
+    <header class="talk__head">
+      <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
+      <div class="talk__title"><h1>Люди и уроки</h1><p>Память наставника: он учитывает это в каждом разборе</p></div>
+    </header>
+    <div class="page__body">
+      <section class="card" aria-labelledby="h-people">
+        <h2 id="h-people">Люди команды <span class="count">{{ people|length }}</span></h2>
+        <p class="small muted">Наставник добавляет людей, которых вы называете по имени. Допишите роль и заметку — например, «опытный, но не любит перемен».</p>
+        {% if people %}
+        <ul class="person-list">
+          {% for p in people %}
+          <li>
+            <details>
+              <summary><span class="av av--sm">{{ p.name[:2] }}</span><span><b>{{ p.name }}</b><span>{{ p.role or "роль не указана" }}{% if p.note %} · {{ p.note[:60] }}{% endif %}</span></span></summary>
+              <form method="post" action="/people/{{ p.id }}" class="form-stack">
+                <label for="pn{{ p.id }}">Имя</label><input id="pn{{ p.id }}" name="name" value="{{ p.name }}" required>
+                <label for="pr{{ p.id }}">Роль</label><input id="pr{{ p.id }}" name="role" value="{{ p.role }}">
+                <label for="pt{{ p.id }}">Заметка для наставника</label><textarea id="pt{{ p.id }}" name="note" rows="2" maxlength="500">{{ p.note }}</textarea>
+                <div class="btn-line"><button class="btn btn--primary" type="submit">Сохранить</button>
+                  <button class="btn btn--secondary" type="submit" name="delete" value="1">Забыть</button></div>
+              </form>
+            </details>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <details class="sub" {% if not people %}open{% endif %}>
+          <summary>Добавить человека</summary>
+          <form method="post" action="/people" class="form-stack">
+            <label for="nn">Имя</label><input id="nn" name="name" required>
+            <label for="nr">Роль</label><input id="nr" name="role" placeholder="Например, старший смены">
+            <label for="nt">Заметка</label><textarea id="nt" name="note" rows="2" maxlength="500"></textarea>
+            <button class="btn btn--primary" type="submit">Добавить</button>
+          </form>
+        </details>
+      </section>
+
+      <section class="card" aria-labelledby="h-lessons" id="lessons">
+        <h2 id="h-lessons">Уроки <span class="count">{{ lessons|length }}</span></h2>
+        {% if lessons %}
+        <ul class="lesson-list">
+          {% for l in lessons %}
+          <li class="lesson lesson--{{ l.outcome }}">
+            <span class="chip {% if l.outcome == 'win' %}chip--done{% elif l.outcome == 'miss' %}chip--late{% endif %}">{{ OUTCOMES.get(l.outcome, '') }}</span>
+            <p>{{ l.text }}</p>
+            <span class="lesson__meta">{{ l.created_at.date()|ru_date }}{% if l.situation_id %} · <a class="link-u" href="/app/{{ l.situation_id }}">к разбору</a>{% endif %}</span>
+            <form method="post" action="/lessons/{{ l.id }}/delete"><button class="icon-btn icon-btn--sm" type="submit" aria-label="Удалить урок"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">Уроки появятся после разбора после дела: когда шаги плана выполнены или сроки прошли, наставник спросит, что вышло, и запишет урок.</p>
+        {% endif %}
+      </section>
+    </div>
+  </main>
+</div>
+{% endblock %}

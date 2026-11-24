@@ -7,17 +7,17 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, jobs, llm, mentor
+from . import access, auth, billing, files, jobs, llm, mentor, speech, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
-from .models import LEVELS, Member, Plan, Shtab, Situation, Step, Usage, User, now
+from .models import LEVELS, Lesson, Member, Person, Plan, Shtab, Situation, Step, Usage, User, now
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 HERE = Path(__file__).resolve().parent
@@ -37,7 +37,8 @@ async def lifespan(_app):
 app = FastAPI(title="Наука побеждать", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
-templates.env.globals.update(LEVELS=LEVELS, settings=get_settings)
+templates.env.globals.update(LEVELS=LEVELS, settings=get_settings, yandex_id_enabled=yandex_id.enabled,
+                             OUTCOMES=mentor.OUTCOMES, BRAND="Наука побеждать · Штаб")
 
 
 def _ru_date(d: dt.date | None) -> str:
@@ -66,6 +67,12 @@ def _to_login(request: Request, exc: auth.LoginRequired):
 
 def page(request: Request, name: str, **ctx):
     return templates.TemplateResponse(request, name, ctx)
+
+
+def auth_token() -> str:
+    import secrets
+
+    return secrets.token_urlsafe(24)
 
 
 def safe_next(url: str | None) -> str:
@@ -106,10 +113,14 @@ def consent(request: Request):
 # ---------- sign-in ----------
 
 @app.get("/login", response_class=HTMLResponse)
-def login_form(request: Request, next: str = "/app", user: User | None = Depends(auth.current_user)):
+def login_form(request: Request, next: str = "/app", mode: str = "code", yerr: str = "",
+               user: User | None = Depends(auth.current_user)):
     if user:
         return see_other(safe_next(next))
-    return page(request, "login.html", next=safe_next(next), step="email")
+    error = {"consent": "Чтобы войти через Яндекс, отметьте согласие на обработку данных.",
+             "failed": "Не получилось войти через Яндекс. Попробуйте ещё раз или войдите по коду."}.get(yerr, "")
+    return page(request, "login.html", next=safe_next(next), step="password" if mode == "password" else "email",
+                error=error)
 
 
 @app.post("/login", response_class=HTMLResponse)
@@ -157,7 +168,11 @@ def login_link(link_token: str, next: str = "/app", db: Session = Depends(get_db
 
 
 @app.post("/logout")
-def logout():
+def logout(request: Request, db: Session = Depends(get_db)):
+    sid = request.cookies.get(auth.COOKIE)
+    if sid and (row := db.get(auth.AuthSession, sid)):
+        db.delete(row)
+        db.commit()
     resp = see_other("/")
     resp.delete_cookie(auth.COOKIE)
     return resp
@@ -177,6 +192,167 @@ def onboarding_save(name: str = Form(""), role: str = Form(""), level: str = For
     user.name, user.role, user.level = name.strip()[:120], role.strip()[:160], level
     db.commit()
     return see_other(safe_next(next))
+
+
+@app.post("/login/password", response_class=HTMLResponse)
+def login_password(request: Request, email: str = Form(...), password: str = Form(...), next: str = Form("/app"),
+                   db: Session = Depends(get_db)):
+    user, error = auth.check_password(db, email, password)
+    if not user:
+        return page(request, "login.html", next=safe_next(next), step="password", email=email, error=error)
+    return _signed_in(db, user, safe_next(next))
+
+
+@app.get("/auth/yandex")
+def yandex_start(next: str = "/app", consent: str = "", link: str = "",
+                 user: User | None = Depends(auth.current_user)):
+    if not yandex_id.enabled():
+        return see_other("/login")
+    if not user and not consent:
+        return see_other(f"/login?next={quote(safe_next(next))}&yerr=consent")
+    state = auth_token()
+    mode = "link" if (link and user) else "login"
+    resp = see_other(yandex_id.authorize_url(state))
+    resp.set_cookie("ya_state", f"{state}|{mode}|{safe_next(next)}", max_age=600, httponly=True, samesite="lax",
+                    secure=get_settings().base_url.startswith("https://"))
+    return resp
+
+
+@app.get("/auth/yandex/callback")
+def yandex_callback(request: Request, code: str = "", state: str = "", error: str = "",
+                    user: User | None = Depends(auth.current_user), db: Session = Depends(get_db)):
+    saved = (request.cookies.get("ya_state") or "").split("|", 2)
+    if error or len(saved) != 3 or not code or saved[0] != state:
+        return see_other("/login?yerr=failed")
+    _, mode, next_url = saved
+    try:
+        prof = yandex_id.profile(code)
+    except yandex_id.YandexIdError:
+        logging.getLogger("yandex_id").exception("Yandex ID sign-in failed")
+        return see_other("/login?yerr=failed")
+    if mode == "link" and user:
+        other = db.scalars(select(User).where(User.yandex_id == prof["id"], User.id != user.id)).first()
+        if other:
+            return see_other("/settings?msg=ya_taken")
+        me = db.merge(user)
+        me.yandex_id = prof["id"]
+        db.commit()
+        resp = see_other("/settings?msg=ya_linked")
+    else:
+        found = db.scalars(select(User).where(User.yandex_id == prof["id"])).first()
+        if not found:
+            found = db.scalars(select(User).where(User.email == prof["email"])).first()
+        if not found:
+            found = User(email=prof["email"], name=prof["name"][:120])
+            db.add(found)
+        found.yandex_id = prof["id"]
+        db.commit()
+        resp = _signed_in(db, found, safe_next(next_url))
+    resp.delete_cookie("ya_state")
+    return resp
+
+
+# ---------- settings ----------
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request, msg: str = "", user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    return page(request, "settings.html", user=user, msg=msg, **_sidebar(db, user),
+                voice_left=speech.left(db, user), sessions=db.scalar(
+                    select(func.count()).select_from(auth.AuthSession).where(auth.AuthSession.user_id == user.id)))
+
+
+@app.post("/settings/profile")
+def settings_profile(name: str = Form(""), role: str = Form(""), level: str = Form(...), team_note: str = Form(""),
+                     user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if level not in LEVELS:
+        raise HTTPException(400)
+    me = db.merge(user)
+    me.name, me.role, me.level = name.strip()[:120], role.strip()[:160], level
+    me.team_note = team_note.strip()[:1500]
+    db.commit()
+    return see_other("/settings?msg=saved")
+
+
+@app.post("/settings/notify")
+def settings_notify(remind_steps: str = Form(""), morning_report: str = Form(""),
+                    user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    me = db.merge(user)
+    me.remind_steps, me.morning_report = bool(remind_steps), bool(morning_report)
+    db.commit()
+    return see_other("/settings?msg=saved#notify")
+
+
+@app.post("/settings/password", response_class=HTMLResponse)
+def settings_password(request: Request, password: str = Form(...), password2: str = Form(...), current: str = Form(""),
+                      user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    me = db.merge(user)
+    problem = auth.password_problem(password)
+    if not problem and password != password2:
+        problem = "Пароли не совпадают"
+    if not problem and me.password_hash and not auth.check_password(db, me.email, current)[0]:
+        problem = "Текущий пароль указан неверно"
+    if problem:
+        return see_other(f"/settings?msg=pw_{quote(problem)}#password")
+    me.password_hash = auth.hash_password(password)
+    db.commit()
+    auth.end_other_sessions(db, me, request.cookies.get(auth.COOKIE))
+    return see_other("/settings?msg=pw_ok#password")
+
+
+@app.post("/settings/sessions")
+def settings_sessions(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    auth.end_other_sessions(db, db.merge(user), request.cookies.get(auth.COOKIE))
+    return see_other("/settings?msg=sessions#security")
+
+
+@app.post("/settings/yandex/unlink")
+def settings_yandex_unlink(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    me = db.merge(user)
+    me.yandex_id = None
+    db.commit()
+    return see_other("/settings?msg=ya_unlinked#security")
+
+
+# ---------- people (the mentor's memory) ----------
+
+@app.get("/people", response_class=HTMLResponse)
+def people_page(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    people = db.scalars(select(Person).where(Person.user_id == user.id).order_by(Person.name)).all()
+    lessons = db.scalars(select(Lesson).where(Lesson.user_id == user.id).order_by(Lesson.id.desc()).limit(20)).all()
+    return page(request, "people.html", user=user, people=people, lessons=lessons, **_sidebar(db, user))
+
+
+@app.post("/people")
+def people_add(name: str = Form(...), role: str = Form(""), note: str = Form(""),
+               user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if name.strip():
+        db.add(Person(user_id=user.id, name=name.strip()[:120], role=role.strip()[:160], note=note.strip()[:500]))
+        db.commit()
+    return see_other("/people")
+
+
+@app.post("/people/{pid}")
+def people_edit(pid: int, name: str = Form(""), role: str = Form(""), note: str = Form(""), delete: str = Form(""),
+                user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    p = db.get(Person, pid)
+    if not p or p.user_id != user.id:
+        raise HTTPException(404)
+    if delete:
+        db.delete(p)
+    else:
+        p.name = name.strip()[:120] or p.name
+        p.role, p.note, p.updated_at = role.strip()[:160], note.strip()[:500], now()
+    db.commit()
+    return see_other("/people")
+
+
+@app.post("/lessons/{lid}/delete")
+def lesson_delete(lid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    lesson = db.get(Lesson, lid)
+    if lesson and lesson.user_id == user.id:
+        db.delete(lesson)
+        db.commit()
+    return see_other("/people#lessons")
 
 
 # ---------- the mentor ----------
@@ -213,11 +389,27 @@ def _own_situation(db: Session, user: User, sid: int) -> Situation:
     return sit
 
 
+async def _read_upload(upload: UploadFile | None) -> tuple[str, str] | None:
+    if not upload or not upload.filename:
+        return None
+    raw = await upload.read(files.MAX_BYTES + 1)
+    return upload.filename, files.extract(upload.filename, raw)
+
+
+def _file_error(url: str, e: Exception) -> RedirectResponse:
+    return see_other(f"{url}?ferr={quote(str(e))}")
+
+
 @app.post("/app/new")
-def app_new(text: str = Form(...), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+async def app_new(text: str = Form(""), file: UploadFile | None = File(None),
+                  user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     if r := _gate(db, user):
         return r
-    if not text.strip():
+    try:
+        attached = await _read_upload(file)
+    except files.FileError as e:
+        return _file_error("/app", e)
+    if not text.strip() and not attached:
         return see_other("/app")
     if not access.can_start(db, user):
         return see_other("/app?limit=1")
@@ -225,6 +417,8 @@ def app_new(text: str = Form(...), user: User = Depends(auth.require_user), db: 
     sit = Situation(user_id=user.id)
     db.add(sit)
     db.flush()
+    if attached:
+        mentor.add_file(sit, *attached)
     try:
         mentor.handle(db, user, sit, text)
     except llm.LLMError:
@@ -240,20 +434,29 @@ def app_situation(request: Request, sid: int, err: int = 0, user: User = Depends
         return r
     sit = _own_situation(db, user, sid)
     return page(request, "app.html", user=user, current=sit, err=err, **_sidebar(db, user),
-                limit=False, room=sit.stage != "follow" or mentor.can_talk(db, user, sit))
+                limit=False, room=sit.stage != "follow" or mentor.can_talk(db, user, sit),
+                review_due=mentor.review_due(sit), can_prep=mentor.can_prep(db, user, sit),
+                ferr=request.query_params.get("ferr", ""))
 
 
 @app.post("/app/{sid}/say")
-def app_say(sid: int, text: str = Form(...), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+async def app_say(sid: int, text: str = Form(""), file: UploadFile | None = File(None),
+                  user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     if r := _gate(db, user):
         return r
     sit = _own_situation(db, user, sid)
-    if not text.strip():
+    try:
+        attached = await _read_upload(file)
+    except files.FileError as e:
+        return _file_error(f"/app/{sid}", e)
+    if not text.strip() and not attached:
         return see_other(f"/app/{sid}")
     if len(sit.messages) >= get_settings().messages_per_situation:
         return see_other(f"/app/{sid}?err=2")
+    if attached:
+        mentor.add_file(sit, *attached)
     try:
-        mentor.handle(db, user, sit, text)
+        mentor.handle(db, user, sit, text or "Посмотрите вложение.")
     except mentor.BudgetSpent:
         db.rollback()
         return see_other(f"/app/{sid}?err=2")
@@ -261,6 +464,96 @@ def app_say(sid: int, text: str = Form(...), user: User = Depends(auth.require_u
         db.rollback()
         return see_other(f"/app/{sid}?err=1")
     return see_other(f"/app/{sid}#end")
+
+
+@app.post("/app/{sid}/review")
+def app_review(sid: int, outcome: str = Form(""), text: str = Form(""),
+               user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    sit = _own_situation(db, user, sid)
+    if sit.review == "done" or not sit.plan:
+        return see_other(f"/app/{sid}")
+    try:
+        mentor.review(db, user, sit, outcome, text)
+    except llm.LLMError:
+        db.rollback()
+        return see_other(f"/app/{sid}?err=1#review")
+    return see_other(f"/app/{sid}#end")
+
+
+def _own_step(db: Session, user: User, step_id: int) -> Step:
+    step = db.get(Step, step_id)
+    if not step or not step.plan or step.plan.user_id != user.id:
+        raise HTTPException(404)
+    return step
+
+
+@app.post("/steps/{step_id}/prep")
+def step_prep(step_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    step = _own_step(db, user, step_id)
+    sid = step.plan.situation_id
+    if not step.prep:
+        try:
+            mentor.prepare_talk(db, user, step)
+        except mentor.BudgetSpent:
+            db.rollback()
+            return see_other(f"/app/{sid}?err=2")
+        except llm.LLMError:
+            db.rollback()
+            return see_other(f"/app/{sid}?err=1")
+    return see_other(f"/app/{sid}#step-{step.id}")
+
+
+def _own_plan(db: Session, user: User, pid: int) -> Plan:
+    plan = db.get(Plan, pid)
+    if not plan or plan.user_id != user.id:
+        raise HTTPException(404)
+    return plan
+
+
+@app.get("/plans/{pid}/order", response_class=HTMLResponse)
+def plan_order(request: Request, pid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """The plan as a printable order (приказ): print it or save as PDF from the browser."""
+    plan = _own_plan(db, user, pid)
+    return page(request, "order.html", user=user, plan=plan, today=dt.date.today())
+
+
+def _ics_text(t: str) -> str:
+    return t.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+@app.get("/plans/{pid}/calendar.ics")
+def plan_ics(pid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """Step dates as all-day calendar events (Яндекс Календарь, Google, Outlook, Apple)."""
+    plan = _own_plan(db, user, pid)
+    stamp = now().strftime("%Y%m%dT%H%M%SZ")
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//nauka.ogiinst.ru//shtab//RU", "CALSCALE:GREGORIAN"]
+    for s in plan.steps:
+        if not s.due:
+            continue
+        d = s.due.strftime("%Y%m%d")
+        nxt = (s.due + dt.timedelta(days=1)).strftime("%Y%m%d")
+        lines += ["BEGIN:VEVENT", f"UID:step-{s.id}@nauka.ogiinst.ru", f"DTSTAMP:{stamp}",
+                  f"DTSTART;VALUE=DATE:{d}", f"DTEND;VALUE=DATE:{nxt}",
+                  f"SUMMARY:{_ics_text(s.text[:120])}",
+                  f"DESCRIPTION:{_ics_text(plan.title + (' · ' + s.owner_name if s.owner_name else ''))}",
+                  "END:VEVENT"]
+    lines.append("END:VCALENDAR")
+    return Response("\r\n".join(lines) + "\r\n", media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="plan-{plan.id}.ics"'})
+
+
+@app.post("/voice")
+async def voice(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """Raw 16 kHz 16-bit mono PCM from the browser → text for the message field."""
+    pcm = await request.body()
+    try:
+        text = speech.recognize(db, user, pcm)
+    except speech.VoiceError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception:  # noqa: BLE001 — network and API errors
+        logging.getLogger("voice").exception("SpeechKit failed")
+        return JSONResponse({"error": "Не удалось распознать запись. Попробуйте ещё раз."}, status_code=502)
+    return {"text": text, "left": speech.left(db, user)}
 
 
 @app.post("/plans/{pid}/send")

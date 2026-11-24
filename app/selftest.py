@@ -33,7 +33,10 @@ def main() -> None:
         print(f"план за {time.time() - t:.1f} с: «{plan.title}»" if plan else f"план не получен: {sit.messages[-1].text[:300]}")
         if plan:
             for s in plan.steps:
-                print(f"  — {s.text} [{s.owner_name}, до {s.due}]")
+                print(f"  — [{s.kind}] {s.text} [{s.owner_name}, до {s.due}]")
+            print(f"  глазомер: {plan.scene} | корень: {plan.cause}")
+            print(f"  быстрота: {plan.first_day}")
+            print(f"  победа: {plan.victory} | риски: {plan.risks}")
             print(f"  принцип: {(plan.principle or {}).get('quote', '')[:120]}")
         cost = mentor.spent(db, sit)
         print(f"стоимость разбора: {cost:.2f} ₽ (потолок {mentor.get_settings().budget_per_situation_rub} ₽)")

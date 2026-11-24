@@ -1,17 +1,20 @@
 {% extends "base.html" %}
-{% block title %}{{ current.title if current else "Новая ситуация" }} — Наука побеждать{% endblock %}
+{% block title %}{{ current.title if current else "Новая ситуация" }} — {{ BRAND }}{% endblock %}
 {% block body %}
 <a class="skip-link" href="#talk">К разговору</a>
 <div class="shell">
   {% include "_side.html" %}
 
   <main class="talk" id="talk">
+  {% set file_kinds = ".txt, .md, .csv, .docx, .pdf до 5 МБ" %}
   {% if not current %}
     <header class="talk__head">
-      <div class="talk__title"><h1>Новая ситуация</h1><p>Опишите, что происходит, своими словами</p></div>
+      <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
+      <div class="talk__title"><h1>Новая ситуация</h1><p>Глазомер, быстрота, натиск — разбор по Суворову</p></div>
     </header>
     <div class="feed">
       {% if request.query_params.get('err') %}<p class="error" role="alert">Наставник не ответил. Попробуйте ещё раз через минуту.</p>{% endif %}
+      {% if request.query_params.get('ferr') %}<p class="error" role="alert">{{ request.query_params.get('ferr') }}</p>{% endif %}
       {% if limit %}
       <div class="notice">
         {% if plan.tier == 'free' %}
@@ -24,96 +27,174 @@
       </div>
       {% else %}
       <div class="start">
-        <p class="start__lead">Что случилось? Расскажите, как рассказали бы опытному коллеге: кто участвует, что мешает, к какому сроку нужен результат.</p>
-        <ul class="start__examples" aria-label="Примеры">
-          <li>Двое в смене постоянно опаздывают, остальные начинают роптать</li>
-          <li>Два отдела срывают общий проект и винят друг друга</li>
-          <li>Сильный сотрудник просит повышения, а места нет</li>
-        </ul>
+        <p class="start__lead">Что случилось? Расскажите, как опытному коллеге: кто участвует, что мешает, к какому сроку нужен результат.</p>
+        <ol class="start__how" aria-label="Как идёт разбор">
+          <li><span><b>Глазомер.</b> Наставник задаст 2–3 вопроса и найдёт корень дела.</span></li>
+          <li><span><b>Быстрота.</b> Одно действие на ближайшие сутки.</span></li>
+          <li><span><b>Натиск.</b> Шаги с исполнителями и сроками, риски, признак победы.</span></li>
+        </ol>
+        <div class="start__examples" aria-label="Примеры">
+          <button type="button" data-example="Двое в смене постоянно опаздывают, остальные начинают роптать. Начальник склада в курсе, штрафов нет.">Двое в смене опаздывают, остальные ропщут</button>
+          <button type="button" data-example="Два отдела срывают общий проект и винят друг друга. До сдачи три недели.">Два отдела срывают проект и винят друг друга</button>
+          <button type="button" data-example="Сильный сотрудник просит повышения, а свободной должности нет. Боюсь, что уйдёт к конкурентам.">Сильный сотрудник просит повышения</button>
+          <button type="button" data-example="Мне нужно объявить команде о сокращении бюджета на 20%. Как сделать, чтобы люди не опустили руки?">Объявить команде о сокращении бюджета</button>
+        </div>
+        <p class="small muted">Можно приложить документ (регламент, отчёт, переписку) или надиктовать голосом.</p>
       </div>
       {% endif %}
     </div>
     {% if not limit %}
-    <form class="composer" method="post" action="/app/new" data-busy>
-      <label class="sr-only" for="say">Опишите ситуацию</label>
-      <textarea id="say" name="text" rows="3" placeholder="Опишите ситуацию" required data-enter-sends autofocus></textarea>
-      <button class="icon-btn icon-btn--send" type="submit" aria-label="Отправить"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2"/></svg></button>
-      <p class="composer__note" data-busy-note hidden>Наставник думает, это 10–30 секунд…</p>
-    </form>
+      {% with action="/app/new", label="Опишите ситуацию", placeholder="Опишите ситуацию", rows=3, autofocus=true, hint="" %}{% include "_composer.html" %}{% endwith %}
     {% endif %}
   {% else %}
-    {% set plan = current.plan %}
+    {% set plan_ = current.plan %}
     <header class="talk__head">
-      <a class="talk__back" href="/app" aria-label="Все ситуации"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></a>
+      <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
       <div class="talk__title">
         <h1>{{ current.title }}</h1>
         <p>Начато {{ current.created_at.date()|ru_date }}
-          {% if current.stage == 'follow' %}· <span class="chip chip--done">План готов</span>{% elif current.stage == 'plan' %}· <span class="chip chip--late">Ждёт ваш ответ</span>{% endif %}</p>
+          {% if current.review == 'done' %}· <span class="chip chip--done">Итог подведён</span>{% elif current.stage == 'follow' %}· <span class="chip chip--done">План готов</span>{% elif current.stage == 'plan' %}· <span class="chip chip--late">Ждёт ваш ответ</span>{% endif %}</p>
       </div>
-      {% if plan and plan.sent_to_shtab_id %}<a class="btn btn--secondary talk__share" href="/shtab/{{ plan.sent_to_shtab_id }}">Открыть штаб</a>{% endif %}
+      {% if plan_ and plan_.sent_to_shtab_id %}<a class="btn btn--secondary talk__share" href="/shtab/{{ plan_.sent_to_shtab_id }}">Открыть штаб</a>{% endif %}
     </header>
 
     <div class="feed">
       {% for m in current.messages %}
-        {% if m.role == 'user' %}
+        {% if m.role == 'user' and m.kind == 'file' %}
+        <div class="msg msg--me"><p class="msg__file"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.8h5.2L12 4.6v9.6H4z"/><path d="M9 1.8v3h3"/></svg><span><b>{{ m.data.name }}</b><small>{{ m.data.chars }} знаков текста{% if m.data.chars > 6000 %}, наставник прочитал первые 6000{% endif %}</small></span></p></div>
+        {% elif m.role == 'user' %}
         <div class="msg msg--me"><p>{{ m.text }}</p><time>{{ m.created_at.strftime('%H:%M') }}</time></div>
         {% elif m.kind == 'questions' %}
         <div class="msg msg--bot">
           <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
           <div class="bot"><p>{{ m.text }}</p><ol class="qs">{% for q in m.data.questions %}<li>{{ q }}</li>{% endfor %}</ol>
-            <p class="muted small">Ответьте одним сообщением — можно коротко.</p></div>
+            <p class="muted small">Ответьте одним сообщением — можно коротко или голосом.</p></div>
         </div>
-        {% elif m.kind == 'plan' and plan %}
+        {% elif m.kind == 'plan' and plan_ %}
         <div class="msg msg--bot">
           <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
           <div class="bot">
-            {% if plan.summary %}<p>{{ plan.summary }}</p>{% endif %}
-            {% if plan.goal %}<p><b>Цель:</b> {{ plan.goal }}</p>{% endif %}
+            {% if plan_.summary %}<p class="bot__lead">{{ plan_.summary }}</p>{% endif %}
             <article class="plan" aria-labelledby="plan-h">
-              <header class="plan__head"><h2 id="plan-h">{{ plan.title }}</h2><span>{{ plan.steps|length|plural('шаг', 'шага', 'шагов') }}</span></header>
-              <ul class="steps">
-                {% for s in plan.steps %}
-                <li class="step {% if s.done %}is-done{% elif s.late %}is-late{% endif %}">
-                  <form method="post" action="/steps/{{ s.id }}/toggle"><label><input type="checkbox" {% if s.done %}checked{% endif %} onchange="this.form.submit()"><span class="step__text">{{ s.text }}</span></label></form>
-                  <span class="who">{% if s.owner_name %}<span class="av av--sm">{{ s.owner_name[:2] }}</span>{{ s.owner_name }}{% endif %}</span><time>{{ s.due|ru_date }}</time>
-                </li>
-                {% endfor %}
-              </ul>
-              {% if plan.principle %}<p class="plan__rule"><span>Принцип · {{ plan.principle.source }}</span>«{{ plan.principle.quote }}» {{ plan.principle.why }}</p>{% endif %}
+              <header class="plan__head"><h2 id="plan-h">{{ plan_.title }}</h2><span>{{ plan_.steps|length|plural('шаг', 'шага', 'шагов') }}</span></header>
+
+              {% if plan_.scene or plan_.cause or plan_.goal %}
+              <section class="art" aria-label="Глазомер">
+                <h3 class="art__h"><span>1</span>Глазомер</h3>
+                <dl class="facts">
+                  {% if plan_.scene %}<div><dt>Обстановка</dt><dd>{{ plan_.scene }}</dd></div>{% endif %}
+                  {% if plan_.cause %}<div><dt>Корень дела</dt><dd>{{ plan_.cause }}</dd></div>{% endif %}
+                  {% if plan_.goal %}<div><dt>Цель</dt><dd>{{ plan_.goal }}</dd></div>{% endif %}
+                </dl>
+              </section>
+              {% endif %}
+
+              {% if plan_.first_day %}
+              <section class="art art--fast" aria-label="Быстрота">
+                <h3 class="art__h"><span>2</span>Быстрота · первые 24 часа</h3>
+                <p>{{ plan_.first_day }}</p>
+              </section>
+              {% endif %}
+
+              <section class="art" aria-label="Натиск">
+                {% if plan_.first_day %}<h3 class="art__h"><span>3</span>Натиск</h3>{% endif %}
+                <ul class="steps">
+                  {% for s in plan_.steps %}
+                  <li class="step {% if s.done %}is-done{% elif s.late %}is-late{% endif %}" id="step-{{ s.id }}">
+                    <form method="post" action="/steps/{{ s.id }}/toggle"><label><input type="checkbox" {% if s.done %}checked{% endif %} onchange="this.form.submit()"><span class="step__text">{% if s.kind == 'talk' %}<i class="kind">Разговор</i>{% elif s.kind == 'check' %}<i class="kind kind--check">Контроль</i>{% endif %}{{ s.text }}</span></label></form>
+                    <span class="who">{% if s.owner_name %}<span class="av av--sm">{{ s.owner_name[:2] }}</span>{{ s.owner_name }}{% endif %}</span><time>{{ s.due|ru_date }}</time>
+                    {% if s.prep %}
+                    <details class="prep" open>
+                      <summary>Подготовка разговора</summary>
+                      {% if s.prep.aim %}<p><b>Цель разговора.</b> {{ s.prep.aim }}</p>{% endif %}
+                      {% if s.prep.opening %}<p class="prep__say">«{{ s.prep.opening }}»</p>{% endif %}
+                      {% if s.prep.points %}<ul>{% for p in s.prep.points %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+                      {% for o in s.prep.objections %}<p class="prep__obj"><span>Если скажут: «{{ o.they }}»</span>{{ o.you }}</p>{% endfor %}
+                      {% if s.prep.close %}<p><b>Чем закончить.</b> {{ s.prep.close }}</p>{% endif %}
+                    </details>
+                    {% elif s.kind == 'talk' and not s.done and can_prep %}
+                    <form class="step__act" method="post" action="/steps/{{ s.id }}/prep" data-busy><button class="btn btn--secondary btn--sm" type="submit">Подготовить разговор</button><span class="composer__note" data-busy-note hidden>Готовлю, это 5–15 секунд…</span></form>
+                    {% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
+              </section>
+
+              {% if plan_.risks %}
+              <section class="art" aria-label="Риски">
+                <h3 class="art__h art__h--plain">Риски и что делаем заранее</h3>
+                <ul class="risks">{% for r in plan_.risks %}<li><b>{{ r.risk }}</b><span>{{ r.counter }}</span></li>{% endfor %}</ul>
+              </section>
+              {% endif %}
+              {% if plan_.victory %}<p class="plan__win"><span>Признак победы</span>{{ plan_.victory }}</p>{% endif %}
+              {% if plan_.principle %}<p class="plan__rule"><span>Принцип · {{ plan_.principle.source }}</span>«{{ plan_.principle.quote }}» {{ plan_.principle.why }}</p>{% endif %}
             </article>
-            {% if plan.warning %}<p class="notice">{{ plan.warning }}</p>{% endif %}
-            {% if shtabs and not plan.sent_to_shtab_id %}
-            <form class="btn-row" method="post" action="/plans/{{ plan.id }}/send">
-              {% if shtabs|length > 1 %}
-              <label class="sr-only" for="sh">Штаб</label>
-              <select id="sh" name="shtab_id">{% for sh in shtabs %}<option value="{{ sh.id }}">{{ sh.name }}</option>{% endfor %}</select>
-              {% else %}<input type="hidden" name="shtab_id" value="{{ shtabs[0].id }}">{% endif %}
-              <button class="btn btn--primary" type="submit">Отправить в штаб</button>
-            </form>
-            {% elif not shtabs %}
-            <p class="small muted">Хотите раздать шаги команде? <a class="link-u" href="/shtab">Соберите штаб</a>.</p>
-            {% endif %}
+            {% if plan_.warning %}<p class="notice">{{ plan_.warning }}</p>{% endif %}
+
+            <div class="plan-actions">
+              {% if shtabs and not plan_.sent_to_shtab_id %}
+              <form class="plan-actions__send" method="post" action="/plans/{{ plan_.id }}/send">
+                {% if shtabs|length > 1 %}
+                <label class="sr-only" for="sh">Штаб</label>
+                <select id="sh" name="shtab_id">{% for sh in shtabs %}<option value="{{ sh.id }}">{{ sh.name }}</option>{% endfor %}</select>
+                {% else %}<input type="hidden" name="shtab_id" value="{{ shtabs[0].id }}">{% endif %}
+                <button class="btn btn--primary" type="submit">Отправить в штаб</button>
+              </form>
+              {% endif %}
+              <a class="btn btn--secondary" href="/plans/{{ plan_.id }}/order" target="_blank">Приказ для печати</a>
+              <a class="btn btn--secondary" href="/plans/{{ plan_.id }}/calendar.ics">Сроки в календарь</a>
+            </div>
+            {% if not shtabs %}<p class="small muted">Хотите раздать шаги команде? <a class="link-u" href="/shtab">Соберите штаб</a>.</p>{% endif %}
           </div>
         </div>
-        {% elif m.kind != 'plan' %}
+        {% elif m.kind == 'review' %}
+        <div class="msg msg--bot" id="review">
+          <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
+          <div class="bot">
+            <article class="review review--{{ m.data.verdict }}">
+              <p class="review__head"><span>Разбор после дела</span><b>{{ OUTCOMES.get(m.data.verdict, '') }}</b></p>
+              {% if m.text %}<p>{{ m.text }}</p>{% endif %}
+              <p class="review__lesson"><span>Урок</span>{{ m.data.lesson }}</p>
+              {% if m.data.next %}<p><b>Дальше:</b> {{ m.data.next }}</p>{% endif %}
+              <p class="small muted">Урок сохранён — наставник учтёт его в следующих разборах. <a class="link-u" href="/people#lessons">Все уроки</a></p>
+            </article>
+          </div>
+        </div>
+        {% else %}
         <div class="msg msg--bot">
           <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
           <div class="bot">{% for para in m.text.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}</div>
         </div>
         {% endif %}
       {% endfor %}
+
+      {% if plan_ and current.review != 'done' %}
+      <details class="aar {% if review_due %}is-due{% endif %}" id="aar" {% if review_due %}open{% endif %}>
+        <summary>{% if review_due %}Пора подвести итог: разбор после дела{% else %}Подвести итог раньше срока{% endif %}</summary>
+        <form method="post" action="/app/{{ current.id }}/review" class="aar__form" data-busy>
+          <fieldset class="seg">
+            <legend class="sr-only">Как вышло</legend>
+            <label><input type="radio" name="outcome" value="win" required><span>Получилось</span></label>
+            <label><input type="radio" name="outcome" value="partial"><span>Частично</span></label>
+            <label><input type="radio" name="outcome" value="miss"><span>Не вышло</span></label>
+          </fieldset>
+          <label class="sr-only" for="aar-text">Что произошло</label>
+          <textarea id="aar-text" name="text" rows="3" placeholder="Что сделали, что сработало, что нет"></textarea>
+          <button class="btn btn--primary" type="submit">Подвести итог</button>
+          <p class="composer__note" data-busy-note hidden>Наставник разбирает, это 5–15 секунд…</p>
+        </form>
+      </details>
+      {% endif %}
+
       <span id="end"></span>
       {% if err == 1 %}<p class="error" role="alert">Наставник не ответил. Отправьте сообщение ещё раз.</p>{% endif %}
-      {% if err == 2 or not room %}<p class="notice">Этот разбор подошёл к концу: разговор получился длинным. Если остались вопросы, начните новую ситуацию и коротко опишите, что уже сделано.</p>{% endif %}
+      {% if ferr %}<p class="error" role="alert">{{ ferr }}</p>{% endif %}
+      {% if err == 2 or not room %}<p class="notice">Этот разбор подошёл к концу: разговор получился длинным. Подведите итог выше или начните новую ситуацию и коротко опишите, что уже сделано.</p>{% endif %}
     </div>
 
     {% if room %}
-    <form class="composer" method="post" action="/app/{{ current.id }}/say" data-busy>
-      <label class="sr-only" for="say">Сообщение наставнику</label>
-      <textarea id="say" name="text" rows="1" placeholder="{% if current.stage == 'plan' %}Ответьте на вопросы{% else %}Спросите про план{% endif %}" required data-enter-sends></textarea>
-      <button class="icon-btn icon-btn--send" type="submit" aria-label="Отправить"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2"/></svg></button>
-      <p class="composer__note" data-busy-note hidden>Наставник думает, это 10–30 секунд…</p>
-    </form>
+      {% with action="/app/" ~ current.id ~ "/say", label="Сообщение наставнику",
+              placeholder=("Ответьте на вопросы" if current.stage == 'plan' else "Спросите про план"), rows=1, autofocus=false, hint="" %}{% include "_composer.html" %}{% endwith %}
     {% endif %}
   {% endif %}
   </main>

@@ -30,6 +30,18 @@ class User(Base):
     level: Mapped[str] = mapped_column(String(8), default="")  # line | mid | top
     consent_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
     extra_plans: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # bought разборы left
+    # sign-in
+    password_hash: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    yandex_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    # settings
+    team_note: Mapped[str] = mapped_column(Text, default="", server_default="")  # о команде и деле, для наставника
+    remind_steps: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    morning_report: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    report_sent_on: Mapped[dt.date | None] = mapped_column(Date)
+    voice_month: Mapped[str] = mapped_column(String(7), default="", server_default="")
+    voice_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
     @property
@@ -70,6 +82,7 @@ class Situation(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     title: Mapped[str] = mapped_column(String(160), default="Новая ситуация")
     stage: Mapped[str] = mapped_column(String(16), default="clarify")  # clarify | plan | follow
+    review: Mapped[str] = mapped_column(String(12), default="", server_default="")  # "" | due | done
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
     messages: Mapped[list[Message]] = relationship(order_by="Message.id", cascade="all, delete-orphan")
@@ -85,7 +98,7 @@ class Message(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     situation_id: Mapped[int] = mapped_column(ForeignKey("situations.id"), index=True)
     role: Mapped[str] = mapped_column(String(12))  # user | mentor
-    kind: Mapped[str] = mapped_column(String(12), default="text")  # text | questions | plan
+    kind: Mapped[str] = mapped_column(String(12), default="text")  # text | questions | plan | file | review
     text: Mapped[str] = mapped_column(Text, default="")
     data: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
@@ -99,6 +112,12 @@ class Plan(Base):
     title: Mapped[str] = mapped_column(String(200))
     summary: Mapped[str] = mapped_column(Text, default="")
     goal: Mapped[str] = mapped_column(Text, default="")
+    # Суворовский разбор: глазомер (обстановка), быстрота (первые сутки), натиск (шаги, риски, победа)
+    scene: Mapped[str] = mapped_column(Text, default="", server_default="")  # обстановка
+    cause: Mapped[str] = mapped_column(Text, default="", server_default="")  # корень дела
+    first_day: Mapped[str] = mapped_column(Text, default="", server_default="")  # что сделать в первые 24 часа
+    risks: Mapped[list | None] = mapped_column(JSON)  # [{"risk", "counter"}]
+    victory: Mapped[str] = mapped_column(Text, default="", server_default="")  # по чему поймём, что победили
     principle: Mapped[dict | None] = mapped_column(JSON)  # {"quote", "source", "why"}
     warning: Mapped[str] = mapped_column(Text, default="")
     sent_to_shtab_id: Mapped[int | None] = mapped_column(ForeignKey("shtabs.id"))
@@ -116,6 +135,8 @@ class Step(Base):
     position: Mapped[int] = mapped_column(Integer, default=0)
     text: Mapped[str] = mapped_column(Text)
     owner_name: Mapped[str] = mapped_column(String(120), default="")
+    kind: Mapped[str] = mapped_column(String(12), default="action", server_default="action")  # action | talk | check
+    prep: Mapped[dict | None] = mapped_column(JSON)  # подготовка разговора
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     due: Mapped[dt.date | None] = mapped_column(Date)
     done: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -129,6 +150,31 @@ class Step(Base):
     @property
     def late(self) -> bool:
         return bool(self.due and not self.done and self.due < dt.date.today())
+
+
+class Person(Base):
+    """Someone from the manager's team: the mentor remembers them across разборы."""
+
+    __tablename__ = "people"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(160), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    mentions: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class Lesson(Base):
+    """What a разбор после дела taught: the mentor uses it next time."""
+
+    __tablename__ = "lessons"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    situation_id: Mapped[int | None] = mapped_column(ForeignKey("situations.id"))
+    outcome: Mapped[str] = mapped_column(String(12), default="")  # win | partial | miss
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 
 
 class Shtab(Base):

@@ -3,13 +3,14 @@
 """
 from .db import SessionLocal, init_db
 from .billing import renew_due
-from .jobs import send_reminders
+from .jobs import send_morning_reports, send_reminders
 
 
 def main() -> None:
     init_db()
     with SessionLocal() as db:
         send_reminders(db)
+        send_morning_reports(db)
         renew_due(db)
 
 

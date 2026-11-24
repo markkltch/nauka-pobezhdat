@@ -1,21 +1,9 @@
 {% extends "_card.html" %}
-{% block title %}Вход — Наука побеждать{% endblock %}
+{% block title %}Вход — {{ BRAND }}{% endblock %}
 {% block card %}
-{% if step == "email" %}
-  <h1>Вход</h1>
-  <p class="muted">Пришлём код на почту. Пароль не нужен.</p>
-  <form method="post" action="/login" class="form-stack">
-    <input type="hidden" name="next" value="{{ next }}">
-    <label for="email">Рабочая почта</label>
-    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
-    <label class="check"><input type="checkbox" name="consent" value="1" required>
-      <span>Соглашаюсь с <a href="/offer" target="_blank">офертой</a> и даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> по <a href="/privacy" target="_blank">политике</a></span></label>
-    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <button class="btn btn--primary" type="submit">Получить код</button>
-  </form>
-{% else %}
+{% if step == "code" %}
   <h1>Код из письма</h1>
-  <p class="muted">Отправили на {{ email }}. Письмо может прийти через минуту; проверьте папку «Спам».</p>
+  <p class="muted">Отправили на {{ email }}. Письмо приходит за минуту; если его нет — проверьте «Спам».</p>
   <form method="post" action="/login/code" class="form-stack">
     <input type="hidden" name="next" value="{{ next }}">
     <input type="hidden" name="email" value="{{ email }}">
@@ -25,5 +13,49 @@
     <button class="btn btn--primary" type="submit">Войти</button>
   </form>
   <p class="small"><a class="link-u" href="/login?next={{ next|urlencode }}">Другой адрес или новый код</a></p>
+{% else %}
+  <h1>Вход</h1>
+  <nav class="seg-tabs" aria-label="Способ входа">
+    <a href="/login?next={{ next|urlencode }}" {% if step == 'email' %}aria-current="page"{% endif %}>Код на почту</a>
+    <a href="/login?mode=password&next={{ next|urlencode }}" {% if step == 'password' %}aria-current="page"{% endif %}>Пароль</a>
+  </nav>
+  {% if step == "password" %}
+  <form method="post" action="/login/password" class="form-stack">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Почта</label>
+    <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required value="{{ email or '' }}">
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Войти</button>
+  </form>
+  <p class="small muted">Пароль задаётся в настройках после первого входа по коду. Забыли — войдите по коду и задайте новый.</p>
+  {% else %}
+  <form method="post" action="/login" class="form-stack" id="login-form">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="email">Рабочая почта</label>
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
+    <label class="check"><input type="checkbox" name="consent" value="1" required id="consent">
+      <span>Соглашаюсь с <a href="/offer" target="_blank">офертой</a> и даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> по <a href="/privacy" target="_blank">политике</a></span></label>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <button class="btn btn--primary" type="submit">Получить код</button>
+  </form>
+  {% endif %}
+  {% if yandex_id_enabled() %}
+  <div class="or"><span>или</span></div>
+  <form method="get" action="/auth/yandex" class="form-stack" id="ya-form">
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if step == 'password' %}<label class="check"><input type="checkbox" name="consent" value="1" required>
+      <span>Соглашаюсь с <a href="/offer" target="_blank">офертой</a> и даю <a href="/consent" target="_blank">согласие</a> на обработку данных</span></label>
+    {% else %}<input type="hidden" name="consent" value="" data-mirror="consent">{% endif %}
+    <button class="btn btn--yandex" type="submit"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M8.9 12.5V3.6h-.8c-1.5 0-2.4.8-2.4 2.1 0 1.1.5 1.7 1.5 2.4l.8.5-2.4 3.9"/></svg>Войти с Яндекс ID</button>
+  </form>
+  <script>
+    // the consent box above also covers Yandex ID
+    (() => { const c = document.getElementById('consent'), m = document.querySelector('[data-mirror=consent]'), f = document.getElementById('ya-form');
+      if (!c || !m) return;
+      f.addEventListener('submit', e => { if (!c.checked) { e.preventDefault(); c.reportValidity(); } else m.value = '1'; }); })();
+  </script>
+  {% endif %}
 {% endif %}
 {% endblock %}

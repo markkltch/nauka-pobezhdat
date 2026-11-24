@@ -1,5 +1,5 @@
 {% extends "_card.html" %}
-{% block title %}Тариф — Наука побеждать{% endblock %}
+{% block title %}Тариф — {{ BRAND }}{% endblock %}
 {% block card %}
 <h1>Тариф</h1>
 <p class="muted">Сейчас у вас <b>{{ plan.tier_name|lower }}</b>: {{ plan.used }} из {{ plan.allowance }} разборов в этом месяце{% if plan.extra %}, ещё {{ plan.extra }} в запасе{% endif %}.{% if settings().free_beta %} Идёт закрытый запуск: полный доступ открыт без оплаты.{% endif %}</p>

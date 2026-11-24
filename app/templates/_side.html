@@ -1,5 +1,5 @@
-<aside class="side" aria-label="Ситуации">
-  <a class="brand" href="/app"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
+<aside class="side" id="side" aria-label="Меню">
+  <a class="brand" href="/app"><span class="mark" data-mark="arc" aria-hidden="true"></span><span>Наука побеждать<small>Штаб</small></span></a>
   <a class="btn btn--primary side__new" href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Новая ситуация</a>
   <p class="side__label">Разборов в этом месяце: {{ plan.used }} из {{ plan.allowance }}{% if plan.extra %} · в запасе {{ plan.extra }}{% endif %}{% if plan.tier == 'free' %} · <a href="/billing">полный доступ</a>{% endif %}</p>
   {% if situations %}
@@ -7,7 +7,7 @@
     {% for s in situations %}
     <li><a class="item {% if current and current.id == s.id %}is-on{% endif %}" href="/app/{{ s.id }}" {% if current and current.id == s.id %}aria-current="page"{% endif %}>
       <b>{{ s.title }}</b>
-      <span>{% if s.stage == 'follow' %}План готов{% elif s.stage == 'plan' %}Ждёт ваш ответ{% else %}Разбор{% endif %} · {{ s.updated_at.date()|ru_date }}</span>
+      <span>{% if s.review == 'done' %}Итог подведён{% elif s.stage == 'follow' %}План готов{% elif s.stage == 'plan' %}Ждёт ваш ответ{% else %}Разбор{% endif %} · {{ s.updated_at.date()|ru_date }}</span>
       {% if s.stage == 'plan' %}<i class="dot" aria-label="Ждёт ответа"></i>{% endif %}
     </a></li>
     {% endfor %}
@@ -15,17 +15,16 @@
   {% else %}
   <p class="side__empty">Здесь появятся ваши ситуации.</p>
   {% endif %}
-  {% for sh in shtabs %}
-  <a class="side__shtab" href="/shtab/{{ sh.id }}">
-    <span class="side__shtab-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><circle cx="6" cy="5.5" r="2.3"/><circle cx="11.5" cy="6.5" r="1.7"/><path d="M2 13c.5-2.3 2-3.6 4-3.6s3.5 1.3 4 3.6M10.5 13c.3-1.6 1.1-2.6 2.3-2.6 1 0 1.8.7 2.2 2"/></svg></span>
-    <span><b>Штаб «{{ sh.name }}»</b><span>{{ sh.members|length }} чел.</span></span>
-  </a>
-  {% else %}
-  <a class="side__shtab" href="/shtab">
-    <span class="side__shtab-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></span>
-    <span><b>Собрать штаб</b><span>Пригласить команду</span></span>
-  </a>
-  {% endfor %}
+  <nav class="side__nav" aria-label="Разделы">
+    {% for sh in shtabs %}
+    <a href="/shtab/{{ sh.id }}"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3"/><circle cx="11.5" cy="6.5" r="1.7"/><path d="M2 13c.5-2.3 2-3.6 4-3.6s3.5 1.3 4 3.6M10.5 13c.3-1.6 1.1-2.6 2.3-2.6 1 0 1.8.7 2.2 2"/></svg>Штаб «{{ sh.name }}»<span>{{ sh.members|length }}</span></a>
+    {% else %}
+    <a href="/shtab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Собрать штаб</a>
+    {% endfor %}
+    <a href="/people" {% if request.url.path == '/people' %}aria-current="page"{% endif %}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v9H3zM5.5 6.5h5M5.5 9h3"/></svg>Люди и уроки</a>
+    <a href="/settings" {% if request.url.path == '/settings' %}aria-current="page"{% endif %}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/></svg>Настройки</a>
+    {% if user.email in settings().admins %}<a href="/admin"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13V8M8 13V3M13 13V6"/></svg>Владелец</a>{% endif %}
+  </nav>
   <div class="me">
     <span class="av av--ink">{{ user.initials }}</span>
     <span><b>{{ user.display_name }}</b><span>{{ LEVELS.get(user.level, '') }}</span></span>

@@ -53,7 +53,7 @@ def test_full_flow(client):
     assert r.status_code == 303
     sid = int(r.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/app/{sid}").text
-    assert "Чтобы план был точным" in page
+    assert "чтобы план был точным" in page
 
     client.post(f"/app/{sid}/say", data={"text": "Одни и те же, говорил один раз"})
     page = client.get(f"/app/{sid}").text
@@ -73,7 +73,7 @@ def test_full_flow(client):
     pid = int(re.search(r"/plans/(\d+)/send", page).group(1))
     client.post(f"/plans/{pid}/send", data={"shtab_id": shtab_id})
     page = client.get(shtab_url).text
-    assert "Поговорите с каждым участником" in page
+    assert "Поговорите с каждым один на один" in page
     invite = re.search(r"/join/([\w-]+)", page).group(1)
 
     with SessionLocal() as db:

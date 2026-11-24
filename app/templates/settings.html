@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Настройки — {{ BRAND }}{% endblock %}
+{% block body %}
+<div class="shell">
+  {% include "_side.html" %}
+  <main class="talk page" id="main">
+    <header class="talk__head">
+      <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
+      <div class="talk__title"><h1>Настройки</h1><p>{{ user.email }}</p></div>
+    </header>
+    <div class="page__body">
+      {% set notes = {"saved": "Сохранено.", "pw_ok": "Пароль сохранён. На других устройствах нужно войти заново.",
+        "sessions": "Другие устройства вышли из аккаунта.", "ya_linked": "Яндекс ID привязан — теперь можно входить через него.",
+        "ya_unlinked": "Яндекс ID отвязан.", "ya_taken": "Этот Яндекс ID уже привязан к другому аккаунту."} %}
+      {% if msg.startswith('pw_') and msg != 'pw_ok' %}<p class="error" role="alert">{{ msg[3:] }}</p>
+      {% elif msg in notes %}<p class="notice notice--ok" role="status">{{ notes[msg] }}</p>{% endif %}
+
+      <section class="card" aria-labelledby="h-profile">
+        <h2 id="h-profile">Профиль</h2>
+        <form method="post" action="/settings/profile" class="form-stack">
+          <label for="name">Имя и фамилия</label>
+          <input id="name" name="name" autocomplete="name" value="{{ user.name }}">
+          <label for="role">Должность</label>
+          <input id="role" name="role" value="{{ user.role }}" placeholder="Например, начальник производства">
+          <fieldset class="levels levels--row">
+            <legend>Уровень</legend>
+            {% for key, label in LEVELS.items() %}
+            <label class="level"><input type="radio" name="level" value="{{ key }}" {% if user.level == key %}checked{% endif %} required><span><b>{{ label }}</b></span></label>
+            {% endfor %}
+          </fieldset>
+          <label for="team_note">О команде и деле</label>
+          <textarea id="team_note" name="team_note" rows="4" maxlength="1500" placeholder="Отрасль, сколько людей в подчинении, как устроена работа, что сейчас главное">{{ user.team_note }}</textarea>
+          <p class="small muted">Наставник учитывает это в каждом разборе. Людей команды и уроки он запоминает сам — их можно поправить в разделе <a class="link-u" href="/people">«Люди и уроки»</a>.</p>
+          <button class="btn btn--primary" type="submit">Сохранить</button>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="h-sec" id="security">
+        <h2 id="h-sec">Вход и безопасность</h2>
+        <div class="rows">
+          <p><span>Почта</span><b>{{ user.email }}</b></p>
+          <p><span>Пароль</span><b>{{ "задан" if user.password_hash else "не задан — вход по коду из письма" }}</b></p>
+          <p><span>Яндекс ID</span><b>{{ "привязан" if user.yandex_id else "не привязан" }}</b></p>
+          <p><span>Устройств со входом</span><b>{{ sessions }}</b></p>
+        </div>
+        <details class="sub" id="password" {% if msg.startswith('pw_') and msg != 'pw_ok' %}open{% endif %}>
+          <summary>{{ "Сменить пароль" if user.password_hash else "Задать пароль" }}</summary>
+          <form method="post" action="/settings/password" class="form-stack">
+            <input type="email" name="username" value="{{ user.email }}" autocomplete="username" hidden>
+            {% if user.password_hash %}
+            <label for="current">Текущий пароль</label>
+            <input id="current" name="current" type="password" autocomplete="current-password" required>
+            {% endif %}
+            <label for="pw1">Новый пароль</label>
+            <input id="pw1" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            <label for="pw2">Ещё раз</label>
+            <input id="pw2" name="password2" type="password" autocomplete="new-password" minlength="8" required>
+            <p class="small muted">Не короче 8 символов, буквы и цифры. После смены пароля другие устройства выйдут из аккаунта.</p>
+            <button class="btn btn--primary" type="submit">Сохранить пароль</button>
+          </form>
+        </details>
+        <div class="btn-line">
+          {% if user.yandex_id %}
+          <form method="post" action="/settings/yandex/unlink"><button class="btn btn--secondary" type="submit">Отвязать Яндекс ID</button></form>
+          {% elif yandex_id_enabled() %}
+          <a class="btn btn--yandex" href="/auth/yandex?link=1&next=/settings">Привязать Яндекс ID</a>
+          {% endif %}
+          {% if sessions > 1 %}
+          <form method="post" action="/settings/sessions"><button class="btn btn--secondary" type="submit">Выйти на других устройствах</button></form>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-notify" id="notify">
+        <h2 id="h-notify">Уведомления на почту</h2>
+        <form method="post" action="/settings/notify" class="form-stack">
+          <label class="switch"><input type="checkbox" name="remind_steps" value="1" {% if user.remind_steps %}checked{% endif %}>
+            <span><b>Напоминания о сроках</b><span>За день до срока шага и если срок прошёл</span></span></label>
+          <label class="switch"><input type="checkbox" name="morning_report" value="1" {% if user.morning_report %}checked{% endif %}>
+            <span><b>Утреннее донесение</b><span>В 8:00 по Москве: что сегодня по срокам, что просрочено, где пора подвести итог. Только в дни, когда есть дела</span></span></label>
+          <button class="btn btn--secondary" type="submit">Сохранить</button>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="h-plan">
+        <h2 id="h-plan">Тариф</h2>
+        <div class="rows">
+          <p><span>Тариф</span><b>{{ plan.tier_name }}</b></p>
+          <p><span>Разборов в этом месяце</span><b>{{ plan.used }} из {{ plan.allowance }}{% if plan.extra %}, в запасе {{ plan.extra }}{% endif %}</b></p>
+          <p><span>Голосовых осталось</span><b>{{ voice_left }}</b></p>
+        </div>
+        <a class="btn btn--secondary" href="/billing">Тариф и оплата</a>
+      </section>
+
+      <form method="post" action="/logout" class="page__out"><button class="btn btn--secondary" type="submit">Выйти из аккаунта</button></form>
+    </div>
+  </main>
+</div>
+{% endblock %}

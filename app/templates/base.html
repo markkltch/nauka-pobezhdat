@@ -2,31 +2,18 @@
 <html lang="ru" data-type="software" data-radius="soft" data-ground="sand" data-buttons="tonal">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Наука побеждать{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>{% block title %}{{ BRAND }}{% endblock %}</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#f4eee2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/landing/assets/system.css">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/app.css?v=4">
 </head>
 <body class="app-page">
 {% block body %}{% endblock %}
-<script>
-  // a long request (the mentor thinks for 10–30 s): lock the form and say so
-  document.addEventListener('submit', e => {
-    const f = e.target; if (f.dataset.busy === undefined) return;
-    const b = f.querySelector('[type=submit]'); if (b) { b.disabled = true; b.setAttribute('aria-busy', 'true'); }
-    const n = f.querySelector('[data-busy-note]'); if (n) n.hidden = false;
-  });
-  // Enter sends, Shift+Enter breaks the line
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey && e.target.matches('textarea[data-enter-sends]')) {
-      e.preventDefault(); if (e.target.value.trim()) e.target.form.requestSubmit();
-    }
-  });
-</script>
+<script src="/static/app.js?v=4" defer></script>
 </body>
 </html>
