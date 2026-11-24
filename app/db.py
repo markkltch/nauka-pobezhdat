@@ -51,5 +51,6 @@ def _add_missing_columns() -> None:
                     continue
                 ddl = f"ALTER TABLE {table.name} ADD COLUMN {col.name} {col.type.compile(engine.dialect)}"
                 if col.server_default is not None:
-                    ddl += f" DEFAULT {col.server_default.arg}"
+                    value = str(col.server_default.arg).replace("'", "''")
+                    ddl += f" DEFAULT '{value}'"
                 conn.execute(text(ddl))
