@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 
 from . import mentor
 from .db import SessionLocal, init_db
-from .models import Message, Plan, Situation, Step, Usage, User
+from .models import Situation, Usage, User
 
 EMAIL = "selftest@nauka.invalid"
 
@@ -41,11 +41,7 @@ def main() -> None:
             print(f"  {u.purpose}: {u.model} {u.tokens_in}+{u.tokens_out} ток., {u.cost_rub:.3f} ₽")
         # clean up
         db.execute(delete(Usage).where(Usage.situation_id == sit.id))
-        for p in sit.plans:
-            db.execute(delete(Step).where(Step.plan_id == p.id))
-        db.execute(delete(Plan).where(Plan.situation_id == sit.id))
-        db.execute(delete(Message).where(Message.situation_id == sit.id))
-        db.delete(sit)
+        db.delete(sit)  # messages, plans and steps go with it (ORM cascade)
         db.delete(user)
         db.commit()
 
