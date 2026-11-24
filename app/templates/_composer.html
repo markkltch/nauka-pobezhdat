@@ -1,20 +1,19 @@
-{# the message field: text, a file, a voice note; Enter sends on a computer, the button on a phone #}
+{# the message field: a floating pill over the conversation — file, text, voice, send; Enter sends on a computer, the button on a phone #}
 <form class="composer" method="post" action="{{ action }}" enctype="multipart/form-data" data-busy>
   <div class="composer__box">
-    <label class="sr-only" for="say">{{ label }}</label>
-    <textarea id="say" name="text" rows="{{ rows or 1 }}" placeholder="{{ placeholder }}" required data-enter-sends {% if autofocus %}autofocus{% endif %}></textarea>
     <p class="file-chip" data-file-chip hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 4.5 5.8 9.2a1.4 1.4 0 0 0 2 2l5-5a2.8 2.8 0 0 0-4-4l-5 5a4.2 4.2 0 0 0 6 6l4.2-4.2"/></svg><span></span><button type="button" aria-label="Убрать файл">×</button></p>
-    <div class="composer__tools">
-      <label class="tool" title="Прикрепить файл: {{ file_kinds }}">
+    <div class="composer__row">
+      <label class="tool tool--attach" title="Прикрепить файл: {{ file_kinds }}">
         <input type="file" name="file" accept=".txt,.md,.csv,.docx,.pdf" class="sr-only">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 4.5 5.8 9.2a1.4 1.4 0 0 0 2 2l5-5a2.8 2.8 0 0 0-4-4l-5 5a4.2 4.2 0 0 0 6 6l4.2-4.2"/></svg>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
         <span class="sr-only">Прикрепить файл</span>
       </label>
+      <label class="sr-only" for="say">{{ label }}</label>
+      <textarea id="say" name="text" rows="1" placeholder="{{ placeholder }}" required data-enter-sends {% if autofocus %}autofocus{% endif %}></textarea>
       <button class="tool tool--mic" type="button" data-voice data-max="{{ settings().voice_max_seconds }}" aria-pressed="false" aria-label="Записать голосом" title="Голосом, до {{ settings().voice_max_seconds }} секунд">
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="1.8" width="5" height="8.2" rx="2.5"/><path d="M3.3 7.6a4.7 4.7 0 0 0 9.4 0M8 12.3v2"/></svg>
       </button>
-      <span class="composer__hint">{{ hint }}</span>
-      <button class="icon-btn icon-btn--send" type="submit" aria-label="Отправить"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2"/></svg></button>
+      <button class="composer__send" type="submit" aria-label="Отправить"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2"/></svg></button>
     </div>
   </div>
   <p class="composer__note" data-busy-note hidden>Наставник думает, это 10–30 секунд…</p>
