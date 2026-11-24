@@ -37,6 +37,49 @@
   --display-tracking: -0.035em;
   --display-tracking-xl: -0.04em;
 }
+  /* FAQ: an ink panel, a sticky side, an accordion with numbered rows */
+  :root { interpolate-size: allow-keywords; }
+  #faq { padding: 48px 0 112px !important; }
+  .qa { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 64px; padding: 72px; border-radius: 32px; background: #12201a; color: #f4eee2; position: relative; overflow: hidden; isolation: isolate; }
+  .qa::before { content: ""; position: absolute; inset: -40% auto auto -20%; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, rgb(168 20 47 / .55), transparent 70%); filter: blur(20px); z-index: -1; }
+  .qa::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgb(244 238 226 / .07) 1px, transparent 1px); background-size: 22px 22px; mask-image: linear-gradient(120deg, #000, transparent 55%); z-index: -1; pointer-events: none; }
+  .qa__side { position: sticky; top: 120px; align-self: start; display: grid; gap: 20px; }
+  .qa__eyebrow { display: inline-flex; align-items: center; gap: 10px; font: 500 13px/1 var(--font-mono); letter-spacing: .18em; color: #e9cf97; }
+  .qa__dot { width: 8px; height: 8px; border-radius: 50%; background: #e0485f; box-shadow: 0 0 0 4px rgb(224 72 95 / .18); }
+  .qa__title { font-family: var(--font-display); font-weight: 400; font-size: clamp(44px, 3.6vw + 12px, 72px); line-height: 1; letter-spacing: -0.04em; color: #fffdf8; }
+  .qa__lead { color: #b9bdb2; font-size: 17px; line-height: 1.5; max-width: 34ch; }
+  .qa__ask { margin-top: 24px; display: grid; gap: 14px; padding: 24px; border-radius: 20px; background: rgb(244 238 226 / .05); border: 1px solid rgb(244 238 226 / .1); max-width: 360px; }
+  .qa__ask p { color: #b9bdb2; line-height: 1.5; } .qa__ask b { color: #fffdf8; font-weight: 500; }
+  .qa__mark { width: 22px; height: 22px; color: #e0485f; }
+  .qa__mail { display: inline-flex; align-items: center; gap: 8px; width: fit-content; font-weight: 500; color: #fffdf8; border-bottom: 1px solid rgb(244 238 226 / .35); padding-bottom: 2px; transition: border-color .2s, gap .2s; }
+  .qa__mail svg { width: 12px; height: 12px; } .qa__mail:hover { border-color: #fffdf8; gap: 12px; }
+  .qa__list { border-top: 1px solid rgb(244 238 226 / .12); }
+  .qa__item { border-bottom: 1px solid rgb(244 238 226 / .12); }
+  .qa__item summary { display: grid; grid-template-columns: 44px 1fr 32px; align-items: center; gap: 12px; padding: 26px 4px; cursor: pointer; list-style: none; }
+  .qa__item summary::-webkit-details-marker { display: none; }
+  .qa__item summary:focus-visible { outline: 2px solid #e9cf97; outline-offset: 4px; border-radius: 8px; }
+  .qa__num { font: 500 13px/1 var(--font-mono); color: #7f857c; transition: color .25s; }
+  .qa__q { font: 500 clamp(18px, .5vw + 14px, 21px)/1.35 var(--font-text); color: #f4eee2; letter-spacing: -0.01em; transition: color .25s; }
+  .qa__icon { position: relative; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgb(244 238 226 / .2); transition: background .3s, border-color .3s, transform .35s cubic-bezier(.3,.7,.2,1); }
+  .qa__icon::before, .qa__icon::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 1.6px; margin: -.8px 0 0 -6px; border-radius: 1px; background: #f4eee2; transition: transform .35s cubic-bezier(.3,.7,.2,1); }
+  .qa__icon::after { transform: rotate(90deg); }
+  .qa__item summary:hover .qa__q { color: #fffdf8; } .qa__item summary:hover .qa__icon { border-color: rgb(244 238 226 / .5); }
+  .qa__item[open] .qa__num { color: #e0485f; }
+  .qa__item[open] .qa__icon { background: #a8142f; border-color: #a8142f; transform: rotate(180deg); }
+  .qa__item[open] .qa__icon::after { transform: rotate(0deg); }
+  .qa__item::details-content { block-size: 0; overflow: hidden; transition: block-size .4s cubic-bezier(.3,.7,.2,1), content-visibility .4s allow-discrete; }
+  .qa__item[open]::details-content { block-size: auto; }
+  .qa__a { padding: 0 48px 28px 60px; }
+  .qa__a p { color: #c9cbc2; font-size: 16.5px; line-height: 1.65; max-width: 60ch; }
+  @media (prefers-reduced-motion: reduce) { .qa__item::details-content, .qa__icon, .qa__icon::before, .qa__icon::after { transition: none; } }
+  @media (max-width: 1023px) { .qa { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 48px 40px; } .qa__side { position: static; } }
+  @media (max-width: 639px) {
+    #faq { padding: 24px 0 72px !important; }
+    .qa { padding: 36px 20px 20px; border-radius: 24px; margin-inline: -8px; }
+    .qa__item summary { grid-template-columns: 32px 1fr 28px; padding: 20px 0; }
+    .qa__icon { width: 28px; height: 28px; }
+    .qa__a { padding: 0 0 22px 44px; } .qa__a p { font-size: 15.5px; }
+  }
 </style>
 <link rel="stylesheet" href="/static/landing/assets/ui/base.css">
 <link rel="stylesheet" href="/static/landing/assets/ui/window/fragment.css">
@@ -134,7 +177,7 @@
   .tcard__badge { font: 500 12px/1 var(--font-text); padding: 5px 8px; border-radius: 6px; background: rgb(168 20 47 / .09); color: var(--p-accent); }
   .tcard__for { color: var(--p-muted); margin-top: -8px; }
   .nav__actions { display: flex; align-items: center; gap: 20px; }
-  .actionbar { display: flex; gap: 8px; } .actionbar .btn { flex: 1; }
+  @media (max-width: 639px) { .nav__actions { gap: 0; margin-left: auto; margin-right: 12px; } .nav__actions .btn { display: none; } .nav.is-open .nav__actions .btn { display: inline-flex; } .nav__signin { font-size: 15px; font-weight: 500; } }
   .tcard__price { display: flex; align-items: baseline; gap: 8px; margin: 4px 0; }
   .tcard__price .t-stat { font-size: clamp(36px, 2vw + 20px, 48px); }
   .tcard .btn { width: 100%; }
@@ -203,7 +246,7 @@
       </div>
       <div class="nav__item"><a class="nav__link" href="#shtab">Штаб</a></div>
       <div class="nav__item"><a class="nav__link" href="#price">Цена</a></div>
-      <div class="nav__item"><a class="nav__link" href="#faq">Вопросы</a></div>
+      <div class="nav__item"><a class="nav__link" href="#faq">FAQ</a></div>
     </nav>
     <div class="nav__actions">
       <a class="nav__link nav__signin" href="/login">Войти</a>
@@ -501,17 +544,50 @@
 
   <section class="section" id="faq" aria-labelledby="faq-h">
     <div class="wrap">
-      <div class="grid">
-        <div class="span-5 stack-4">
-          <h2 id="faq-h">Вопросы</h2>
-          <p class="muted">Ответы на то, что спрашивают чаще всего.</p>
+      <div class="qa">
+        <div class="qa__side">
+          <p class="qa__eyebrow"><span class="qa__dot" aria-hidden="true"></span>FAQ</p>
+          <h2 id="faq-h" class="qa__title">Коротко<br>о главном</h2>
+          <p class="qa__lead">Восемь вопросов, которые руководители задают перед первым разбором.</p>
+          <div class="qa__ask">
+            <span class="mark qa__mark" data-mark="arc" aria-hidden="true"></span>
+            <p><b>Не нашли ответ?</b><br>Напишите нам, разберёмся вместе.</p>
+            <a class="qa__mail" href="mailto:info@oginst.ru">info@oginst.ru<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6h8M5.5 2.5 9 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </div>
         </div>
-        <div class="faq span-6 start-7">
-          <div class="faq__item"><h3>Чем это отличается от обычного чат-бота?</h3><p>Наставник не отвечает общими словами. Сначала уточняет обстановку, потом даёт план с исполнителями и сроками.</p></div>
-          <div class="faq__item"><h3>Для какого уровня руководителя?</h3><p>Для любого: от мастера участка до генерального директора. Ответы подстраиваются под ваш уровень.</p></div>
-          <div class="faq__item"><h3>Где работает наставник?</h3><p>В браузере на компьютере и телефоне, устанавливать ничего не нужно. Ситуацию можно описать текстом, голосом или приложить файл.</p></div>
-          <div class="faq__item"><h3>Как оплатить штаб?</h3><p>Глава штаба платит за всех одним платежом: 1 500 ₽ в месяц за каждого участника. Организация может оплатить по счёту.</p></div><div class="faq__item"><h3>Можно ли отменить подписку?</h3><p>Да, автопродление отключается в разделе «Тариф» в любой момент. Оплаченный месяц доработает до конца.</p></div>
-          <div class="faq__item"><h3>Где хранятся данные?</h3><p>На серверах в России. Ваши ситуации не используются для обучения моделей. Сервис предоставляет АНО ВО «Открытый гуманитарный институт».</p></div>
+        <div class="qa__list">
+          <details class="qa__item" name="faq" open>
+            <summary><span class="qa__num">01</span><span class="qa__q">Чем это отличается от обычного чат-бота?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Чат-бот отвечает на вопрос. Наставник ведёт разбор: сначала уточняет обстановку — кто участвует, что уже пробовали, сколько есть времени, — и только потом даёт план с исполнителями, сроками и рисками. Через несколько дней спросит, как прошло.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">02</span><span class="qa__q">Что считается одним разбором?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Одна рабочая ситуация от описания до плана. Уточняющие вопросы, сам план, подготовка трудного разговора и разбор после дела входят в него и отдельно не считаются.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">03</span><span class="qa__q">Для какого уровня руководителя?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Для любого — от мастера участка до генерального директора. При регистрации вы указываете свой уровень, и наставник говорит на языке вашей задачи: где-то про смену и график, где-то про акционеров и стратегию.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">04</span><span class="qa__q">Где работает наставник?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>В браузере на компьютере и телефоне, ничего устанавливать не нужно. Ситуацию можно описать текстом, надиктовать голосом или приложить документ — Word, PDF, таблицу.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">05</span><span class="qa__q">Как оплатить штаб?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Глава штаба платит за всех одним платежом: 1 500 ₽ в месяц за каждого участника. Участники входят по ссылке-приглашению. Организация может оплатить по счёту.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">06</span><span class="qa__q">Можно ли отменить подписку?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Да, в любой момент: автопродление отключается в разделе «Тариф». Оплаченный месяц доработает до конца, а за неиспользованные дни можно вернуть деньги по заявлению.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">07</span><span class="qa__q">Где хранятся мои данные?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>На серверах в России. Ваши ситуации видите только вы и те, с кем вы делите штаб. Мы не используем их для обучения моделей и не передаём для рекламы.</p></div>
+          </details>
+          <details class="qa__item" name="faq">
+            <summary><span class="qa__num">08</span><span class="qa__q">Кто стоит за сервисом?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>«Наука побеждать · Штаб» создан в Открытом гуманитарном институте (АНО ВО «ОГИ»). Метод опирается на суворовские правила — глазомер, быстрота, натиск — переложенные на задачи современного руководителя.</p></div>
+          </details>
         </div>
       </div>
     </div>
@@ -535,7 +611,7 @@
         </div>
         <div class="span-2 footer__col"><h3>Продукт</h3><ul><li><a href="#plan">План действий</a></li><li><a href="#how">Три шага</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Команда</h3><ul><li><a href="#shtab">Штаб</a></li><li><a href="#method">Метод</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">Вопросы</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">FAQ</a></li></ul></div>
       </div>
       <div class="footer__legal">
         <span>&copy; 2026 АНО ВО «ОГИ», ИНН 9710113703, ОГРН 1237700304126 &nbsp; <a href="/offer">Оферта</a> &nbsp; <a href="/privacy">Персональные данные</a> &nbsp; <a href="mailto:info@oginst.ru">info@oginst.ru</a></span>
@@ -545,10 +621,6 @@
   </div>
 </footer>
 
-<nav class="actionbar" aria-label="Быстрые действия">
-  <a class="btn btn--secondary" href="/login">Войти</a>
-  <a class="btn btn--primary" href="/register">Начать бесплатно</a>
-</nav>
 
 <script type="module" src="/static/landing/assets/system.js"></script>
 <script type="module" src="/static/landing/assets/motion/motion.js"></script>
