@@ -65,6 +65,8 @@ pytest -q
 
 Документация [Т‑Банка по подключению магазина](https://www.tbank.ru/business/help/business-payments/internet-acquiring/how-involve/connect/),
 [API интернет-эквайринга](https://developer.tbank.ru/eacq/api) и [фискализации](https://developer.tbank.ru/eacq/scenarios/fiscalization).
+Клиент API дополнительно доверяет [корневому и промежуточному сертификатам Минцифры](https://www.gosuslugi.ru/crt)
+из `app/certs/russian-trusted-ca.pem` согласно [инструкции банка](https://developer.tbank.ru/eacq/intro/certificates/).
 
 ## Владельцу
 

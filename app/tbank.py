@@ -4,9 +4,13 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+import ssl
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from urllib.parse import urlsplit
 
+import certifi
 import httpx
 
 from .config import get_settings
@@ -31,6 +35,13 @@ def token(payload: dict, password: str) -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
+@lru_cache(maxsize=1)
+def tls_context() -> ssl.SSLContext:
+    context = ssl.create_default_context(cafile=certifi.where())
+    context.load_verify_locations(cafile=Path(__file__).with_name("certs") / "russian-trusted-ca.pem")
+    return context
+
+
 def _request(method: str, **data) -> dict:
     s = get_settings()
     if not s.tbank_credentials:
@@ -38,7 +49,7 @@ def _request(method: str, **data) -> dict:
     payload = {"TerminalKey": s.tbank_terminal_key, **data}
     payload["Token"] = token(payload, s.tbank_password)
     try:
-        response = httpx.post(f"{API}/{method}", json=payload, timeout=15.0)
+        response = httpx.post(f"{API}/{method}", json=payload, timeout=15.0, verify=tls_context())
         response.raise_for_status()
         result = response.json()
     except (httpx.HTTPError, ValueError) as exc:
