@@ -1,0 +1,14 @@
+.legal-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.legal-links a { text-decoration: underline; text-underline-offset: 3px; }
+.legal-foot .legal-links { justify-content: center; }
+.payment-logos, .footer ul.payment-logos { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; }
+.payment-logos li, .payment-logos a { display: flex; align-items: center; justify-content: center; }
+.payment-logos li { padding: 8px 12px; min-height: 42px; background: #fff; border: 1px solid #e2ddd2; border-radius: 6px; }
+.payment-logos li:has(a) { padding: 0; }
+.payment-logos a { min-height: 42px; padding: 8px 12px; }
+.payment-logos img { display: block; width: auto; height: 20px; max-width: 106px; object-fit: contain; }
+#contact.footer.closing { height: auto; min-height: 0; }
+#contact.footer.closing > .wrap { height: auto; grid-template-rows: auto auto; }
+.footer .merchant-foot { display: grid; gap: 8px; }
+.merchant-foot address { font-style: normal; }
+.merchant-foot address a { white-space: nowrap; }

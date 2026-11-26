@@ -29,6 +29,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(160), default="")  # должность, своими словами
     level: Mapped[str] = mapped_column(String(8), default="")  # line | mid | top
     consent_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    ip_consent_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
     extra_plans: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # bought разборы left
     # sign-in
     password_hash: Mapped[str] = mapped_column(String(200), default="", server_default="")
@@ -65,6 +66,7 @@ class LoginCode(Base):
     # registration: applied to the account only after the address is confirmed
     pending_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
     pending_password: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    pending_ip_consent: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     expires_at: Mapped[dt.datetime] = mapped_column(DateTime)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 

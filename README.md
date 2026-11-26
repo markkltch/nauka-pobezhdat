@@ -11,9 +11,9 @@
 | Вход по коду на почту | `app/auth.py`, `app/mailer.py` |
 | Наставник | `app/mentor.py` — вопросы и план; `app/llm.py` — GigaChat, YandexGPT или заглушка |
 | Методичка | `method/principles.md` — принципы; `method/quotes.json` — проверенные цитаты |
-| Оплата ЮKassa и доступ | `app/billing.py` |
+| Оплата и доступ | `app/billing.py`, `app/tbank.py` |
 | Напоминания и продления | `app/jobs.py` (раз в 10 минут, внутри приложения) |
-| Экраны | `app/templates/`, `app/static/app.css`; лендинг — `app/static/landing/` |
+| Экраны | `app/templates/`, `app/static/app.css`; лендинг — `app/templates/landing.html` |
 | Выкладка | `docker-compose.yml` (PostgreSQL, приложение, Caddy с HTTPS), `deploy/` |
 
 Наставник показывает цитату Суворова, только если её id есть в `method/quotes.json`: модель выбирает
@@ -46,10 +46,27 @@ pytest -q
 
 ## Оплата
 
-Пока `YOOKASSA_SHOP_ID` пуст или `FREE_BETA=true`, доступ бесплатный. После одобрения магазина:
-впишите ключи, `FREE_BETA=false`, в кабинете ЮKassa укажите адрес уведомлений
-`https://ДОМЕН/billing/webhook` (события `payment.succeeded`, `payment.canceled`). Сервер не верит
-телу уведомления и перечитывает платёж из ЮKassa.
+### Т‑Банк
+
+1. На сервере укажите `PAYMENT_PROVIDER=tbank`, `PERSONAL_DATA_OPERATOR=ip`, `BASE_URL=https://nauka.ogiinst.ru` и `FREE_BETA=true`.
+   Оферта, политика, согласие и страница оплаты станут доступны для проверки. В существующих аккаунтах может понадобиться согласие новому оператору.
+2. В Т‑Бизнесе создайте интернет-магазин для этого домена. Для платёжной формы банка включите карты, СБП и T-Pay, настройте одностадийную оплату и
+   уведомления HTTP(S) на `https://nauka.ogiinst.ru/billing/tbank/webhook`.
+3. Подключите кассу ИП к терминалу, выберите её формат `TBANK_FFD`, систему налогообложения `TBANK_TAXATION` и ставку `TBANK_VAT`.
+   Проверьте электронный чек, в том числе адрес сайта и признак расчёта в интернете. Код передаёт банку email плательщика, наименование услуги и суммы в копейках.
+4. Проверьте тестовый терминал в отдельном окружении. После проверки магазина запишите ключ и пароль рабочего терминала в серверный `.env`
+   как `TBANK_TERMINAL_KEY` и `TBANK_PASSWORD`. Для начала продаж установите `FREE_BETA=false` и перезапустите приложение.
+
+Новые оплаты Т‑Банка разовые. Доступ и пакеты активируются только после подтверждённого платежа. При возврате
+оформите операцию и чек возврата в кабинете банка и кассы, затем скорректируйте остаток доступа или пакета.
+
+Платежи ЮKassa продолжают проверяться по старому адресу `/billing/webhook`, пока заданы её ключи. При переключении
+на Т‑Банк автоматические списания через ЮKassa прекращаются, ранее оплаченный доступ действует до конца периода.
+
+Документация [Т‑Банка по подключению магазина](https://www.tbank.ru/business/help/business-payments/internet-acquiring/how-involve/connect/),
+[API интернет-эквайринга](https://developer.tbank.ru/eacq/api) и [фискализации](https://developer.tbank.ru/eacq/scenarios/fiscalization).
+Клиент API дополнительно доверяет [корневому и промежуточному сертификатам Минцифры](https://www.gosuslugi.ru/crt)
+из `app/certs/russian-trusted-ca.pem` согласно [инструкции банка](https://developer.tbank.ru/eacq/intro/certificates/).
 
 ## Владельцу
 

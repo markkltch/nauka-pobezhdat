@@ -25,6 +25,7 @@
   .quote small { display: block; color: var(--muted); }
   .sign { margin-top: 40px; display: flex; justify-content: space-between; gap: 24px; color: var(--muted); }
   .sign span { flex: 1; border-top: 1px solid var(--ink); padding-top: 4px; font-size: 12px; }
+  .document-source { margin-top: 24px; color: var(--muted); font-size: 11px; }
   .bar { max-width: 210mm; margin: 16px auto 0; display: flex; gap: 8px; justify-content: flex-end; padding: 0 8px; }
   .bar button, .bar a { font: 500 15px/1 "Onest", sans-serif; padding: 12px 18px; border-radius: 10px; border: 0; background: var(--carmine); color: #fff; cursor: pointer; text-decoration: none; }
   .bar a { background: #fffdf8; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
@@ -50,6 +51,7 @@
   {% if plan.victory %}<h2>Признак победы</h2><p>{{ plan.victory }}</p>{% endif %}
   {% if plan.principle %}<div class="quote">«{{ plan.principle.quote }}»<small>{{ plan.principle.source }}</small></div>{% endif %}
   <div class="sign"><span>Руководитель</span><span>С приказом ознакомлены</span></div>
+  {% if TBANK %}<p class="document-source">Сформировано в сервисе «Наука побеждать» · {{ MERCHANT.short }} · ИНН {{ MERCHANT.inn }} · {{ MERCHANT.registration_label }} {{ MERCHANT.ogrn }}</p>{% endif %}
 </article>
 </body>
 </html>
