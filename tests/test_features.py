@@ -70,7 +70,8 @@ def test_plan_three_arts_prep_review_memory(client):
     with SessionLocal() as db:
         plan = db.scalars(select(Plan).where(Plan.situation_id == sid)).one()
         talk = next(s for s in plan.steps if s.kind == "talk")
-        assert db.scalars(select(Person).where(Person.name == "Иван Петров")).first()  # remembered
+        assert db.scalars(select(Person).where(Person.name == "Пётр Сидоров")).first()  # remembered
+        assert len(db.scalars(select(Person).where(Person.name.in_(["Пётр Сидоров", "пётр  сидоров"]))).all()) == 1  # "пётр  сидоров" is the same person
         plan_id, talk_id = plan.id, talk.id
     client.post(f"/steps/{talk_id}/prep", follow_redirects=False)
     page = client.get(f"/app/{sid}").text
@@ -94,7 +95,7 @@ def test_plan_three_arts_prep_review_memory(client):
         u = db.scalars(select(User).where(User.email == "plan@example.ru")).one()
         assert db.scalars(select(Lesson).where(Lesson.user_id == u.id)).first()
         assert "Уроки прошлых разборов" in mentor.memory(db, u)
-    assert "Иван Петров" in client.get("/people").text
+    assert "Пётр Сидоров" in client.get("/people").text
 
 
 def _docx(text: str) -> bytes:

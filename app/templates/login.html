@@ -10,7 +10,7 @@
     <input type="hidden" name="email" value="{{ email }}">
     <input type="hidden" name="tab" value="{{ tab or 'login' }}">
     <label for="code">Код из 6 цифр</label>
-    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" spellcheck="false" placeholder="000000" required autofocus>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <button class="btn btn--primary" type="submit">{% if tab == "register" %}Подтвердить и войти{% else %}Войти{% endif %}</button>
   </form>
@@ -27,11 +27,11 @@
   <form method="post" action="/register" class="form-stack" id="reg-form">
     <input type="hidden" name="next" value="{{ next }}">
     <label for="name">Как к вам обращаться</label>
-    <input id="name" name="name" autocomplete="name" required maxlength="120" value="{{ full_name or '' }}" placeholder="Иван Петров">
+    <input id="name" name="name" autocomplete="name" required maxlength="120" value="{{ full_name or '' }}" placeholder="Иван Петров" autocapitalize="words">
     <label for="email">Рабочая почта</label>
-    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}">
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required placeholder="name@company.ru" value="{{ email or '' }}">
     <label for="password">Пароль</label>
-    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-hint">
+    <div class="pw"><input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-hint"><button type="button" class="pw__eye" data-pw-toggle aria-label="Показать пароль" aria-pressed="false">Показать</button></div>
     <p class="small muted" id="pw-hint">Не короче 8 символов, буквы и цифры.</p>
     <label class="check"><input type="checkbox" name="consent" value="1" required id="consent">
       <span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a></span></label>
@@ -61,7 +61,7 @@
   <form method="post" action="/login" class="form-stack">
     <input type="hidden" name="next" value="{{ next }}">
     <label for="email">Почта</label>
-    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required value="{{ email or '' }}" autofocus>
+    <input id="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required placeholder="name@company.ru" value="{{ email or '' }}" autofocus>
     {% if noacc %}<p class="error" role="alert">Аккаунта с почтой {{ email }} нет. <a class="link-u" href="/register?email={{ email|urlencode }}&{{ q[1:] }}">Зарегистрироваться</a></p>{% endif %}
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <button class="btn btn--primary" type="submit">Получить код</button>
@@ -74,9 +74,9 @@
   <form method="post" action="/login/password" class="form-stack">
     <input type="hidden" name="next" value="{{ next }}">
     <label for="email">Почта</label>
-    <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required value="{{ email or '' }}">
-    <div class="label-row"><label for="password">Пароль</label><a class="small link-u" href="/login?mode=code&{{ q[1:] }}">Забыли пароль?</a></div>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <input id="email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required placeholder="name@company.ru" value="{{ email or '' }}">
+    <div class="label-row"><label for="password">Пароль</label><a class="small link-u link-tap" href="/login?mode=code&{{ q[1:] }}">Забыли пароль?</a></div>
+    <div class="pw"><input id="password" name="password" type="password" autocomplete="current-password" required><button type="button" class="pw__eye" data-pw-toggle aria-label="Показать пароль" aria-pressed="false">Показать</button></div>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <button class="btn btn--primary" type="submit">Войти</button>
   </form>

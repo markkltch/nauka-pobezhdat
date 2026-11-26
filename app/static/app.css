@@ -496,3 +496,50 @@ div.start__examples { display: flex; flex-wrap: wrap; gap: var(--s-2); }
   .composer__row { padding: 4px; }
   .composer textarea { font-size: 16px; padding: 11px 6px; }
 }
+
+/* ===== audit pass (Vercel guidelines, taste-skill checks) ===== */
+html { -webkit-text-size-adjust: 100%; }
+a, button, summary, label, input, select, textarea { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--action, #1c4fd8); outline-offset: 2px; }
+.num, .tier__price, time { font-variant-numeric: tabular-nums; }
+
+/* the page head lines up with the column under it */
+.talk__head { padding-left: max(var(--s-7), calc((100% - 860px) / 2 + var(--s-7))); padding-right: max(var(--s-7), calc((100% - 860px) / 2 + var(--s-7))); }
+.talk.page .talk__head { padding-left: max(var(--s-7), calc((100% - 760px) / 2 + var(--s-7))); padding-right: max(var(--s-7), calc((100% - 760px) / 2 + var(--s-7))); }
+.talk__title p .chip { margin-left: 2px; }
+
+/* tap targets: 44px on phones, 32px+ elsewhere */
+.icon-btn--sm { width: 40px; height: 40px; }
+.seg-tabs a { min-height: 44px; }
+.link-tap { display: inline-flex; align-items: center; min-height: 32px; }
+.legal-foot a { display: inline-flex; align-items: center; min-height: 32px; }
+.check { min-height: 44px; align-items: center; }
+
+/* password with a show/hide switch */
+.pw { position: relative; }
+.pw input { width: 100%; padding-right: 104px; box-sizing: border-box; }
+.pw__eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-width: 88px; height: 40px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted); font: 500 14px/1 var(--font-text); cursor: pointer; }
+.pw__eye:hover { background: var(--bg); color: var(--ink); }
+
+/* shtab tasks: text on its own line on a phone, then who and when */
+@media (max-width: 759px) {
+  .task { grid-template-columns: minmax(0, 1fr) auto; }
+  .task > form:first-child { grid-column: 1 / -1; }
+  .task .who select { min-height: 44px; }
+  .task time { align-self: center; }
+  .icon-btn--sm { width: 44px; height: 44px; }
+  .legal-foot a, .link-tap { min-height: 44px; }
+  select, input, textarea, .who select, .invite input { font-size: 16px; }
+  .who select { height: 44px; max-width: 180px; }
+  .pw__eye { height: 44px; }
+  /* sign-in and sign-up without a card on a phone: the form is the page */
+  .solo { padding: max(var(--s-5), env(safe-area-inset-top)) var(--s-4) var(--s-5); gap: var(--s-4); }
+  .solo__card { padding: var(--s-2) 0 var(--s-4); background: transparent; box-shadow: none; border-radius: 0; }
+}
+@media (max-width: 759px) {
+  .invite { flex-wrap: wrap; }
+  .invite input { flex: 1 1 100%; }
+  .invite .btn { flex: 1 1 100%; }
+  .solo .seg-tabs { background: rgb(18 32 26 / .06); }
+}

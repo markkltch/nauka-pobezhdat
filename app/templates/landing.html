@@ -77,7 +77,7 @@
   @media (max-width: 1023px) { .qa { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 48px 40px; } .qa__side { position: static; } }
   @media (max-width: 639px) {
     #faq { padding: 24px 0 72px !important; }
-    .qa { padding: 36px 20px 20px; border-radius: 24px; margin-inline: -8px; }
+    .qa { padding: 36px 20px 20px; border-radius: 24px; }
     .qa__item summary { grid-template-columns: 32px 1fr 28px; padding: 20px 0; }
     .qa__icon { width: 28px; height: 28px; }
     .qa__a { padding: 0 0 22px 44px; } .qa__a p { font-size: 15.5px; }
@@ -164,7 +164,7 @@
   main > section:not(.hero) > .wrap > .fill { flex: none !important; }
   #plan .app.fill { height: 560px; }
   #shtab .grid.fill { align-items: center; }
-  #shtab .frame--fill { height: 460px; min-height: 0; }
+  #shtab .frame--fill { height: 460px; min-height: 0; flex: none !important; width: 100%; align-self: stretch; }
   /* white UI panels on the carmine frame keep dark ink */
   .frame--lit .ui { --fx-bg: #ffffff; --fx-surface: #f4eee2; --fx-ink: #12201a; --fx-muted: #5a5a50; --fx-accent: #a8142f; --fx-accent-ink: #fffdf8; color: #12201a; }
   @media (max-width: 639px) { main > section:not(.hero) { padding: 72px 0 !important; } main > section.statement { padding: 48px 0 !important; } #plan .app.fill { height: 460px; } #shtab .frame--fill { height: 380px; } }
@@ -203,6 +203,28 @@
   .tcmp-wrap a { text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 1023px) { .tariffs { grid-template-columns: minmax(0, 1fr); max-width: 560px; } }
   @media (max-width: 639px) { .tcard { padding: 22px; } .tcmp { font-size: 14px; } .tcmp th, .tcmp td { padding: 12px 6px; } .tcmp td { white-space: normal; } }
+  /* audit fixes: rhythm, alignment, tap targets */
+  .ticks { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 12px; }
+  .ticks li { position: relative; padding-left: 28px; line-height: 1.45; }
+  .ticks li::before { content: ""; position: absolute; left: 2px; top: 6px; width: 12px; height: 7px; border-left: 2px solid var(--p-accent); border-bottom: 2px solid var(--p-accent); transform: rotate(-45deg); }
+  .tcard__fine { min-height: 52px; display: flex; align-items: center; margin: 0; font-size: 14px; line-height: 1.4; color: var(--p-muted); }
+  .stepper { height: 52px; }
+  .stepper__btn { width: 44px; height: 44px; touch-action: manipulation; }
+  .qa__mail { min-height: 44px; align-items: center; }
+  footer.closing { height: auto !important; min-height: 0 !important; padding-top: 112px !important; padding-bottom: 40px !important; }
+  footer.closing > .wrap { display: flex; flex-direction: column; gap: 96px; height: auto !important; }
+  footer.closing .closing__links { margin-top: 0 !important; }
+  .footer a, .closing__links a { display: inline-flex; align-items: center; min-height: 32px; }
+  a, button, summary, label, input, select, textarea { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 639px) {
+    .hero .pill .muted { display: none; }
+    .tcmp th, .tcmp td { padding: 12px 4px; }
+    .tcmp tbody th { width: 52%; font-size: 14px; line-height: 1.4; }
+    .tcmp thead th { font-size: 12.5px; }
+    footer.closing { padding-top: 72px !important; }
+    footer.closing > .wrap { gap: 56px; }
+    .footer a, .closing__links a { min-height: 44px; }
+  }
 </style>
 </head>
 <body>
@@ -269,17 +291,18 @@
         <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. {{ s.price_per_seat_rub|rub }} в месяц.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/register">Начать бесплатно</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
       </div>
-      <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="7" role="img" aria-label="Наставник отвечает руководителю планом из трёх шагов на 21 день">
-        <div class="ly-piece d-win" aria-hidden="true">
-          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Иван Петров</b> · начальник отдела</span><span class="sp"></span><span>Веб</span></div>
+      <div class="hero__window" data-ui-pause-host data-fx="painterly-landscape" data-fx-seed="7">
+        <p class="sr-only">Пример: наставник отвечает руководителю планом из трёх шагов на 21 день.</p>
+        <div class="ly-piece d-win">
+          <div class="d-win__bar" aria-hidden="true"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Иван Петров</b> · начальник отдела</span><span class="sp"></span><span>Веб</span></div>
           <div class="d-win__body">
-            <div class="inbox">
+            <div class="inbox" aria-hidden="true">
               <div class="q">Поиск</div>
               <div class="t is-on"><b>Два отдела срывают проект</b><time>10:42</time><span>До сдачи три недели</span></div>
               <div class="t"><b>Разговор о повышении</b><time>вт</time><span>План готов · 3 шага</span></div>
               <div class="t"><b>Бюджет на I квартал</b><time>18.11</time><span>План готов · 4 шага</span></div>
             </div>
-            <div class="convo">
+            <div class="convo" aria-hidden="true">
               <div class="d-chat" data-ly-steps="900">
                 <div class="d-msg d-msg--me">Закупки и производство срывают общий проект и винят друг друга. До сдачи три недели.</div>
                 <div class="d-tool" data-step>Уточняю, кто решает спор и чем грозит опоздание</div>
@@ -450,9 +473,9 @@
         <div class="span-5 stack-4">
           <h2 id="shtab-h">Штаб для вашей команды</h2>
           <p class="t-lead">Пригласите заместителей и руководителей отделов. Задачи из плана уходят исполнителям одной кнопкой.</p>
-          <ul class="stack-3" style="margin:0;padding:0;list-style:none">
-            <li>Приглашение участников по ссылке</li>
-            <li>Общие задачи, исполнители и сроки</li>
+          <ul class="ticks">
+            <li>Участники входят по ссылке-приглашению</li>
+            <li>Общие задачи с исполнителями и сроками</li>
             <li>Подсказка, где горит срок</li>
           </ul>
           <p><a class="link" href="#price">Посмотреть цену для штаба</a></p>
@@ -479,13 +502,14 @@
     <div class="wrap">
       <div class="section-head price-head">
         <h2 id="price-h">Тарифы</h2>
-        <p class="t-lead muted">Начните бесплатно. Полный доступ стоит {{ s.price_per_seat_rub|rub }} в месяц за руководителя — одному или всем штабом. Цена за человека одна: в штабе вы просто платите за всех одним счётом.</p>
+        <p class="t-lead muted">Начните бесплатно. Полный доступ стоит {{ s.price_per_seat_rub|rub }} в месяц за руководителя, одному или всем штабом. Цена за человека одна: в штабе вы просто платите за всех одним счётом.</p>
       </div>
       <div class="tariffs">
         <article class="tcard">
           <h3>Бесплатно</h3>
           <p class="tcard__for">Попробовать метод на своих задачах</p>
           <p class="tcard__price"><span class="t-stat">0 ₽</span><span class="muted">без срока</span></p>
+          <p class="tcard__fine">Без карты. Перейти на полный можно в любой момент</p>
           <a class="btn btn--secondary" href="/register">Начать бесплатно</a>
           <ul class="tcard__list">
             <li><b>{{ s.free_plans_per_month|plural('разбор', 'разбора', 'разборов') }}</b> ситуаций в месяц</li>
@@ -498,12 +522,13 @@
           <h3>Полный <span class="tcard__badge">для руководителя</span></h3>
           <p class="tcard__for">Разбирать ситуации каждую неделю</p>
           <p class="tcard__price"><span class="t-stat">{{ s.price_per_seat_rub|rub }}</span><span class="muted">в месяц</span></p>
+          <p class="tcard__fine">{% if TBANK %}Без автосписаний: следующий месяц оплачиваете сами{% else %}Автопродление отключается в один клик{% endif %}</p>
           <a class="btn btn--primary" href="/register?next=/billing">Подключить</a>
           <ul class="tcard__list">
             <li><b>{{ s.monthly_plan_limit|plural('разбор', 'разбора', 'разборов') }}</b> ситуаций в месяц</li>
             <li><b>{{ s.voice_per_month }} голосовых</b> сообщений в месяц</li>
             <li>Память о людях и уроках из прошлых разборов</li>
-            <li>Нужно больше — <b>+{{ s.pack_size|plural('разбор', 'разбора', 'разборов') }} за {{ s.pack_price_rub|rub }}</b>, не сгорают</li>
+            <li>Нужно больше: <b>+{{ s.pack_size|plural('разбор', 'разбора', 'разборов') }} за {{ s.pack_price_rub|rub }}</b>, не сгорают</li>
           </ul>
         </article>
         <article class="tcard">
@@ -512,12 +537,12 @@
           <p class="tcard__price"><span class="t-stat" data-shtab-total>{{ (3 * s.price_per_seat_rub)|rub }}</span><span class="muted">в месяц</span></p>
           <div class="stepper" role="group" aria-label="Сколько человек в штабе">
             <button type="button" class="stepper__btn" data-shtab-step="-1" aria-label="Меньше">−</button>
-            <span class="stepper__val"><b data-shtab-n>3</b> <span data-shtab-word>руководителя</span> × {{ s.price_per_seat_rub|rub }}</span>
+            <span class="stepper__val" aria-live="polite"><b data-shtab-n>3</b> <span data-shtab-word>руководителя</span> × {{ s.price_per_seat_rub|rub }}</span>
             <button type="button" class="stepper__btn" data-shtab-step="1" aria-label="Больше">+</button>
           </div>
           <a class="btn btn--secondary" href="/register?next=/shtab">Собрать штаб</a>
           <ul class="tcard__list">
-            <li>У каждого участника — всё из «Полного»</li>
+            <li>У каждого участника всё из «Полного»</li>
             <li>Глава штаба платит за всех одним счётом</li>
             <li>Участники входят по ссылке-приглашению</li>
             <li>Оплата картой, через СБП{% if TBANK %} или T-Pay{% endif %}. Для организаций доступен запрос счёта</li>
@@ -527,7 +552,7 @@
       <div class="tcmp-wrap">
         <table class="tcmp">
           <caption>Что входит</caption>
-          <thead><tr><th scope="col"></th><th scope="col">Бесплатно</th><th scope="col">Полный</th><th scope="col">Штаб</th></tr></thead>
+          <thead><tr><th scope="col"><span class="sr-only">Что входит</span></th><th scope="col">Бесплатно</th><th scope="col">Полный</th><th scope="col">Штаб</th></tr></thead>
           <tbody>
             <tr><th scope="row">Разборов ситуаций в месяц</th><td>{{ s.free_plans_per_month }}</td><td>{{ s.monthly_plan_limit }}</td><td>{{ s.monthly_plan_limit }} у каждого</td></tr>
             <tr><th scope="row">Голосовых сообщений в месяц, до {{ s.voice_max_seconds }} секунд</th><td>{{ s.voice_free_per_month }}</td><td>{{ s.voice_per_month }}</td><td>{{ s.voice_per_month }} у каждого</td></tr>
@@ -560,7 +585,7 @@
         <div class="qa__list">
           <details class="qa__item" name="faq" open>
             <summary><span class="qa__num">01</span><span class="qa__q">Чем это отличается от обычного чат-бота?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>Чат-бот отвечает на вопрос. Наставник ведёт разбор: сначала уточняет обстановку — кто участвует, что уже пробовали, сколько есть времени, — и только потом даёт план с исполнителями, сроками и рисками. Через несколько дней спросит, как прошло.</p></div>
+            <div class="qa__a"><p>Чат-бот отвечает на вопрос. Наставник ведёт разбор: сначала уточняет обстановку (кто участвует, что уже пробовали, сколько есть времени) и только потом даёт план с исполнителями, сроками и рисками. Через несколько дней спросит, как прошло.</p></div>
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">02</span><span class="qa__q">Что считается одним разбором?</span><span class="qa__icon" aria-hidden="true"></span></summary>
@@ -568,11 +593,11 @@
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">03</span><span class="qa__q">Для какого уровня руководителя?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>Для любого — от мастера участка до генерального директора. При регистрации вы указываете свой уровень, и наставник говорит на языке вашей задачи: где-то про смену и график, где-то про акционеров и стратегию.</p></div>
+            <div class="qa__a"><p>Для любого: от мастера участка до генерального директора. При регистрации вы указываете свой уровень, и наставник говорит на языке вашей задачи: где-то про смену и график, где-то про акционеров и стратегию.</p></div>
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">04</span><span class="qa__q">Где работает наставник?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>В браузере на компьютере и телефоне, ничего устанавливать не нужно. Ситуацию можно описать текстом, надиктовать голосом или приложить документ — Word, PDF, таблицу.</p></div>
+            <div class="qa__a"><p>В браузере на компьютере и телефоне, ничего устанавливать не нужно. Ситуацию можно описать текстом, надиктовать голосом или приложить документ: Word, PDF, таблицу.</p></div>
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">05</span><span class="qa__q">Как оплатить штаб?</span><span class="qa__icon" aria-hidden="true"></span></summary>
@@ -588,7 +613,7 @@
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">08</span><span class="qa__q">Кто стоит за сервисом?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>«Наука побеждать · Штаб» создан в Открытом гуманитарном институте (АНО ВО «ОГИ»). {% if TBANK %}Доступ к сервису предоставляет {{ MERCHANT.short }}. {% endif %}Метод опирается на суворовские правила — глазомер, быстрота, натиск — переложенные на задачи современного руководителя.</p></div>
+            <div class="qa__a"><p>«Наука побеждать · Штаб» создан в Открытом гуманитарном институте (АНО ВО «ОГИ»). {% if TBANK %}Доступ к сервису предоставляет {{ MERCHANT.short }}. {% endif %}Метод опирается на суворовские правила (глазомер, быстрота, натиск), переложенные на задачи современного руководителя.</p></div>
           </details>
         </div>
       </div>
@@ -601,7 +626,7 @@
     <div class="closing__cta close--type">
       <div class="section-head">
         <h2 id="close-h">Разберите первую ситуацию сегодня</h2>
-        <p class="t-small muted">Бесплатно — {{ s.free_plans_per_month|plural('разбор', 'разбора', 'разборов') }} в месяц. Полный доступ — {{ s.price_per_seat_rub|rub }} в месяц.</p>
+        <p class="t-small muted">Бесплатно {{ s.free_plans_per_month|plural('разбор', 'разбора', 'разборов') }} в месяц. Полный доступ за {{ s.price_per_seat_rub|rub }} в месяц.</p>
       </div>
       <a class="btn btn--primary btn--xl btn--wide" href="/register">Начать бесплатно<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
     </div>

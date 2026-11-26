@@ -225,7 +225,7 @@ function pauseButton(loop) {
   btn.className = 'loop-pause m-own';
   const show = paused => {
     btn.innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
-    btn.setAttribute('aria-label', `${paused ? 'Play' : 'Pause'} animation`);
+    btn.setAttribute('aria-label', paused ? 'Запустить анимацию' : 'Остановить анимацию');
     btn.title = btn.getAttribute('aria-label');
     btn.classList.toggle('is-paused', paused);
   };

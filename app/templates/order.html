@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Приказ · {{ plan.title }}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#e9e2d4">
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&display=swap" rel="stylesheet">
 <style>
   :root { --ink: #12201a; --muted: #5b5b52; --line: #d8cfbd; --carmine: #a8142f; }
@@ -27,14 +29,15 @@
   .sign span { flex: 1; border-top: 1px solid var(--ink); padding-top: 4px; font-size: 12px; }
   .document-source { margin-top: 24px; color: var(--muted); font-size: 11px; }
   .bar { max-width: 210mm; margin: 16px auto 0; display: flex; gap: 8px; justify-content: flex-end; padding: 0 8px; }
-  .bar button, .bar a { font: 500 15px/1 "Onest", sans-serif; padding: 12px 18px; border-radius: 10px; border: 0; background: var(--carmine); color: #fff; cursor: pointer; text-decoration: none; }
+  .bar button, .bar a { display: inline-flex; align-items: center; min-height: 44px; font: 500 15px/1 "Onest", sans-serif; padding: 0 18px; border-radius: 10px; border: 0; background: var(--carmine); color: #fff; cursor: pointer; text-decoration: none; }
   .bar a { background: #fffdf8; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
   @media print { body { background: none; } .sheet { margin: 0; box-shadow: none; min-height: 0; } .bar { display: none; } @page { size: A4; margin: 14mm; } .sheet { padding: 0; } }
   @media (max-width: 640px) { .sheet { margin: 8px; padding: 18px; min-height: 0; } td.o { width: auto; } }
 </style>
 </head>
 <body>
-<div class="bar"><a href="/app/{{ plan.situation_id }}">← К разбору</a><button type="button" onclick="print()">Печать или PDF</button></div>
+<nav class="bar" aria-label="Действия"><a href="/app/{{ plan.situation_id }}">← К разбору</a><button type="button" onclick="print()">Печать или PDF</button></nav>
+<main>
 <article class="sheet">
   <div class="top"><div><b>Наука побеждать · Штаб</b><span>{{ user.display_name }}{% if user.role %}, {{ user.role }}{% endif %}</span></div><span>{{ today.strftime('%d.%m.%Y') }}</span></div>
   <h1>Приказ</h1>
@@ -53,5 +56,6 @@
   <div class="sign"><span>Руководитель</span><span>С приказом ознакомлены</span></div>
   {% if TBANK %}<p class="document-source">Сформировано в сервисе «Наука побеждать» · {{ MERCHANT.short }} · ИНН {{ MERCHANT.inn }} · {{ MERCHANT.registration_label }} {{ MERCHANT.ogrn }}</p>{% endif %}
 </article>
+</main>
 </body>
 </html>

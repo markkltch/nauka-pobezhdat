@@ -139,7 +139,7 @@ class Fake:
                 "principle_id": "maneuver",
                 "principle_why": "Каждый должен понимать не только что делать, но и зачем.",
                 "warning": "",
-                "people": [{"name": "Иван Петров", "role": "кладовщик"}],
+                "people": [{"name": "Пётр Сидоров", "role": "кладовщик"}, {"name": "пётр  сидоров", "role": ""}],
             }, ensure_ascii=False)
         elif "РЕЖИМ: ПОДГОТОВКА" in system:
             text = json.dumps({

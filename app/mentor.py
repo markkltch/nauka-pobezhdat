@@ -80,16 +80,21 @@ def memory(db: Session, user: User) -> str:
 
 
 def remember_people(db: Session, user: User, people: list) -> None:
+    # compare names in Python: SQLite's lower() leaves Cyrillic as is, and new rows of this batch are not flushed yet
+    known = {p.name.casefold(): p for p in db.scalars(select(Person).where(Person.user_id == user.id))}
+    me = (user.name or "").strip().casefold()
     for item in people[:8]:
         if not isinstance(item, dict):
             continue
-        name = str(item.get("name", "")).strip()[:120]
-        if len(name) < 2 or name.lower() in {"вы", "я", "руководитель"}:
+        name = " ".join(str(item.get("name", "")).split())[:120]
+        key = name.casefold()
+        if len(name) < 2 or key in {"вы", "я", "руководитель"} or (me and key == me):
             continue
-        p = db.scalars(select(Person).where(Person.user_id == user.id, func.lower(Person.name) == name.lower())).first()
+        p = known.get(key)
         if not p:
             p = Person(user_id=user.id, name=name, mentions=0)
             db.add(p)
+            known[key] = p
         p.mentions = (p.mentions or 0) + 1
         role = str(item.get("role", "")).strip()[:160]
         if role and not p.role:

@@ -98,7 +98,10 @@ export function once(el, fn, { threshold = 0.35, margin = '0px', rescue = 3000 }
 }
 
 export function split(el, unit = 'words') {
-  if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', el.textContent.replace(/\s+/g, ' ').trim());
+  // the words become hidden pieces; a visually hidden copy keeps the sentence for screen readers
+  // (an aria-label on a paragraph is not allowed, axe: aria-prohibited-attr)
+  const said = el.getAttribute('aria-label') || el.textContent.replace(/\s+/g, ' ').trim();
+  el.removeAttribute('aria-label');
   const inners = [];
   const wrap = (text, cls) => {
     const s = document.createElement('span');
@@ -134,6 +137,13 @@ export function split(el, unit = 'words') {
   };
   walk(el);
   el.querySelectorAll('.mo-w').forEach(w => w.setAttribute('aria-hidden', 'true'));
+  if (!el.querySelector(':scope > .mo-said')) {
+    const sr = document.createElement('span');
+    sr.className = 'mo-said';
+    sr.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0';
+    sr.textContent = said;
+    el.prepend(sr);
+  }
   return inners;
 }
 

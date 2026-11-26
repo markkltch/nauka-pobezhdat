@@ -111,15 +111,31 @@
   const side = document.querySelector('.side'), openers = document.querySelectorAll('[data-menu]');
   if (side && openers.length) {
     const scrim = document.createElement('div'); scrim.className = 'scrim'; document.body.append(scrim);
-    const set = on => {
+    const phone = matchMedia('(max-width: 759px)');
+    // a closed drawer is out of the tab order and hidden from screen readers
+    const sync = () => { side.inert = phone.matches && !document.body.classList.contains('menu-open'); };
+    const set = (on, back) => {
       document.body.classList.toggle('menu-open', on);
       openers.forEach(b => b.setAttribute('aria-expanded', on));
+      sync();
       if (on) side.querySelector('a, button')?.focus();
+      else if (back) openers[0].focus();
     };
     openers.forEach(b => b.addEventListener('click', () => set(!document.body.classList.contains('menu-open'))));
     scrim.addEventListener('click', () => set(false));
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) set(false, true); });
+    phone.addEventListener('change', sync); sync();
   }
+
+  // show or hide a password
+  document.querySelectorAll('[data-pw-toggle]').forEach(btn => btn.addEventListener('click', () => {
+    const input = btn.parentElement.querySelector('input'), show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Скрыть' : 'Показать';
+    btn.setAttribute('aria-label', show ? 'Скрыть пароль' : 'Показать пароль');
+    btn.setAttribute('aria-pressed', String(show));
+    input.focus();
+  }));
 
   // examples on the start screen fill the field
   document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => {

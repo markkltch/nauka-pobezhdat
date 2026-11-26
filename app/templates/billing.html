@@ -11,8 +11,8 @@
     <p class="tier__price">0 ₽</p>
     <ul>
       <li>{{ settings().free_plans_per_month|plural('разбор', 'разбора', 'разборов') }} в месяц</li>
+      <li>{{ settings().voice_free_per_month|plural('голосовое', 'голосовых', 'голосовых') }} в месяц</li>
       <li>Штаб, задачи и сроки без ограничений</li>
-      <li>Напоминания о сроках на почту</li>
     </ul>
   </section>
   <section class="tier {% if plan.tier == 'pro' %}is-on{% endif %}">
@@ -20,8 +20,9 @@
     <p class="tier__price">{{ settings().price_per_seat_rub|rub }} <span>за 30 дней на человека</span></p>
     <ul>
       <li>{{ settings().monthly_plan_limit }} разборов в месяц</li>
-      <li>Всё, что в бесплатном</li>
-      <li>Можно докупить разборы</li>
+      <li>{{ settings().voice_per_month }} голосовых в месяц</li>
+      <li>+{{ settings().pack_size }} разборов за {{ settings().pack_price_rub|rub }}, не сгорают</li>
+      <li>Для штаба — та же цена за каждого, один счёт</li>
     </ul>
     {% if enabled and (plan.tier == 'free' or TBANK) %}
     <form method="post" action="/billing/start" class="form-stack">
@@ -72,5 +73,5 @@
 {% elif not settings().free_beta %}
   <p class="small muted">Приём онлайн-оплаты готовится к запуску. Обращения принимаем на <a href="mailto:{{ MERCHANT.email }}">{{ MERCHANT.email }}</a>.</p>
 {% endif %}
-<p><a href="/app">К разговорам</a></p>
+<p><a class="btn btn--secondary" href="/app">← К разговорам</a></p>
 {% endblock %}

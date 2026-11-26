@@ -17,7 +17,7 @@
           {% for p in people %}
           <li>
             <details>
-              <summary><span class="av av--sm">{{ p.name[:2] }}</span><span><b>{{ p.name }}</b><span>{{ p.role or "роль не указана" }}{% if p.note %} · {{ p.note[:60] }}{% endif %}</span></span></summary>
+              <summary><span class="av av--sm" aria-hidden="true">{{ p.name|initials }}</span><span><b>{{ p.name }}</b><span>{{ p.role or "роль не указана" }}{% if p.note %} · {{ p.note[:60] }}{% endif %}</span></span></summary>
               <form method="post" action="/people/{{ p.id }}" class="form-stack">
                 <label for="pn{{ p.id }}">Имя</label><input id="pn{{ p.id }}" name="name" value="{{ p.name }}" required>
                 <label for="pr{{ p.id }}">Роль</label><input id="pr{{ p.id }}" name="role" value="{{ p.role }}">

@@ -58,6 +58,7 @@ def _plural(n: int, one: str, few: str, many: str) -> str:
 
 templates.env.filters["ru_date"] = _ru_date
 templates.env.filters["plural"] = _plural
+templates.env.filters["initials"] = lambda name: "".join(w[0] for w in (name or "?").split()[:2]).upper() or "?"
 templates.env.filters["rub"] = lambda n: f"{int(n):,}".replace(",", "\u00a0") + "\u00a0₽"
 
 

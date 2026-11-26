@@ -53,7 +53,7 @@
       <div class="talk__title">
         <h1>{{ current.title }}</h1>
         <p>Начато {{ current.created_at.date()|ru_date }}
-          {% if current.review == 'done' %}· <span class="chip chip--done">Итог подведён</span>{% elif current.stage == 'follow' %}· <span class="chip chip--done">План готов</span>{% elif current.stage == 'plan' %}· <span class="chip chip--late">Ждёт ваш ответ</span>{% endif %}</p>
+          {% if current.review == 'done' %}<span class="chip chip--done">Итог подведён</span>{% elif current.stage == 'follow' %}<span class="chip chip--done">План готов</span>{% elif current.stage == 'plan' %}<span class="chip chip--late">Ждёт ваш ответ</span>{% endif %}</p>
       </div>
       {% if plan_ and plan_.sent_to_shtab_id %}<a class="btn btn--secondary talk__share" href="/shtab/{{ plan_.sent_to_shtab_id }}">Открыть штаб</a>{% endif %}
     </header>
@@ -102,7 +102,7 @@
                   {% for s in plan_.steps %}
                   <li class="step {% if s.done %}is-done{% elif s.late %}is-late{% endif %}" id="step-{{ s.id }}">
                     <form method="post" action="/steps/{{ s.id }}/toggle"><label><input type="checkbox" {% if s.done %}checked{% endif %} onchange="this.form.submit()"><span class="step__text">{% if s.kind == 'talk' %}<i class="kind">Разговор</i>{% elif s.kind == 'check' %}<i class="kind kind--check">Контроль</i>{% endif %}{{ s.text }}</span></label></form>
-                    <span class="who">{% if s.owner_name %}<span class="av av--sm">{{ s.owner_name[:2] }}</span>{{ s.owner_name }}{% endif %}</span><time>{{ s.due|ru_date }}</time>
+                    <span class="who">{% if s.owner_name %}<span class="av av--sm" aria-hidden="true">{{ s.owner_name|initials }}</span>{{ s.owner_name }}{% endif %}</span><time>{{ s.due|ru_date }}</time>
                     {% if s.prep %}
                     <details class="prep" open>
                       <summary>Подготовка разговора</summary>
