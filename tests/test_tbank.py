@@ -127,7 +127,7 @@ def test_merchant_pages_and_operator_consent(terminal):
         assert "ИП Стариков Матвей" in response.text
         assert "ОГРНИП 326508100589159" in response.text
         assert "info@oginst.ru" in response.text
-    for name in ("mir", "sbp", "tpay", "tbank"):
+    for name in ("mir", "visa", "mastercard", "unionpay", "sbp", "tpay", "tbank"):
         assert client.get(f"/static/payments/{name}.svg").headers["content-type"] == "image/svg+xml"
     response = client.get("/billing", follow_redirects=False)
     assert response.headers["location"] == "/privacy/confirm?next=%2Fbilling"
