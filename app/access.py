@@ -10,7 +10,7 @@ case per person is allowance × budget — see docs/economics.md.
 """
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from .config import get_settings
@@ -27,7 +27,8 @@ def _active(sub: Subscription | None) -> bool:
 def _covered_by_shtab(db: Session, user: User) -> bool:
     for member in db.scalars(select(Member).where(Member.user_id == user.id)).all():
         sub = db.scalars(select(Subscription).where(Subscription.shtab_id == member.shtab_id)
-                         .order_by(Subscription.id.desc())).first()
+                         .where(Subscription.status == "active", Subscription.paid_until > now())
+                         .order_by(Subscription.paid_until.desc(), Subscription.id.desc())).first()
         if not _active(sub):
             continue
         order = db.scalars(select(Member.user_id).where(Member.shtab_id == member.shtab_id)
@@ -41,7 +42,8 @@ def tier(db: Session, user: User) -> str:
     if get_settings().free_beta:
         return PRO
     own = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.shtab_id.is_(None))
-                     .order_by(Subscription.id.desc())).first()
+                     .where(Subscription.status == "active", Subscription.paid_until > now())
+                     .order_by(Subscription.paid_until.desc(), Subscription.id.desc())).first()
     if _active(own) or _covered_by_shtab(db, user):
         return PRO
     return FREE
@@ -65,7 +67,8 @@ def can_start(db: Session, user: User) -> bool:
 def consume(db: Session, user: User) -> None:
     """Call right before a new разбор is created: past the monthly allowance it spends a bought one."""
     if used_this_month(db, user) >= allowance(db, user):
-        user.extra_plans = max(0, (user.extra_plans or 0) - 1)
+        db.execute(update(User).where(User.id == user.id, User.extra_plans > 0)
+                   .values(extra_plans=User.extra_plans - 1))
 
 
 def summary(db: Session, user: User) -> dict:

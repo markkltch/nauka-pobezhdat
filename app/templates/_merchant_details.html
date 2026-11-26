@@ -1,0 +1,6 @@
+<p>{{ MERCHANT.full }}<br>
+ИНН {{ MERCHANT.inn }}, {{ MERCHANT.registration_label }} {{ MERCHANT.ogrn }}{% if MERCHANT.kpp %}, КПП {{ MERCHANT.kpp }}{% endif %}<br>
+{% if MERCHANT.registrar %}Дата регистрации {{ MERCHANT.registration_date }}. Регистрирующий орган — {{ MERCHANT.registrar }}.<br>{% endif %}
+Почтовый адрес для обращений — {{ MERCHANT.address }}<br>
+Почта <a href="mailto:{{ MERCHANT.email }}">{{ MERCHANT.email }}</a>, телефон <a href="tel:{{ MERCHANT.phone|replace(' ', '')|replace('(', '')|replace(')', '')|replace('-', '') }}">{{ MERCHANT.phone }}</a>
+{% if MERCHANT.bank %}<br>{{ MERCHANT.bank }}{% endif %}</p>

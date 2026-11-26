@@ -1,0 +1,14 @@
+{% extends "_card.html" %}
+{% block title %}Согласие на обработку данных — {{ BRAND }}{% endblock %}
+{% block card %}
+<h1>Новый оператор данных</h1>
+<p>Оператор «Науки побеждать» — {{ LEGAL.short }}. Чтобы продолжить работу в сервисе, подтвердите согласие на обработку данных этим оператором.</p>
+<p><a href="/privacy">Политика обработки персональных данных</a></p>
+{% if error %}<p role="alert">Отметьте согласие, чтобы продолжить.</p>{% endif %}
+<form action="/privacy/confirm" method="post" class="form-stack">
+  <input type="hidden" name="next" value="{{ next }}">
+  <label><input type="checkbox" name="consent" value="yes" required> Даю <a href="/consent">согласие на обработку персональных данных</a></label>
+  <button class="btn btn--primary" type="submit">Продолжить</button>
+</form>
+<form action="/logout" method="post"><button class="btn btn--secondary" type="submit">Выйти</button></form>
+{% endblock %}

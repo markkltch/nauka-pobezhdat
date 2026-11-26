@@ -1,10 +1,11 @@
+{% set s = settings() %}
 <!doctype html>
 <html lang="ru" data-type="software" data-radius="soft" data-ground="sand" data-buttons="tonal" data-motion>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Наука побеждать: ИИ-наставник для руководителей</title>
-<meta name="description" content="Опишите рабочую ситуацию и получите план действий с исполнителями и сроками. Для мастера участка и для директора, 1 500 ₽ в месяц.">
+<meta name="description" content="Опишите рабочую ситуацию и получите план действий с исполнителями и сроками. Для мастера участка и для директора, {{ s.price_per_seat_rub|rub }} в месяц.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Наука побеждать: ИИ-наставник для руководителей">
 <meta property="og:description" content="План действий для руководителя по методу Суворова: ситуация, два-три вопроса, шаги и сроки.">
@@ -19,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/landing/assets/system.css">
+<link rel="stylesheet" href="/static/payment.css">
 <link rel="stylesheet" href="/static/landing/assets/ui/cards.css">
 <link rel="stylesheet" href="/static/landing/assets/motion/motion.css">
 <link rel="stylesheet" href="/static/landing/assets/backgrounds/backgrounds.css">
@@ -264,7 +266,7 @@
       <div class="hero__c">
         <a class="pill" href="#method"><span>По методу А. В. Суворова</span><span class="muted">В браузере, на компьютере и телефоне</span></a>
         <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ-наставник для руководителей</h1>
-        <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. 1 500 ₽ в месяц.</p>
+        <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. {{ s.price_per_seat_rub|rub }} в месяц.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/register">Начать бесплатно</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
       </div>
       <div class="hero__window" data-fx="painterly-landscape" data-fx-seed="7" role="img" aria-label="Наставник отвечает руководителю планом из трёх шагов на 21 день">
@@ -477,7 +479,7 @@
     <div class="wrap">
       <div class="section-head price-head">
         <h2 id="price-h">Тарифы</h2>
-        <p class="t-lead muted">Начните бесплатно. Полный доступ стоит 1 500 ₽ в месяц за руководителя — одному или всем штабом. Цена за человека одна: в штабе вы просто платите за всех одним счётом.</p>
+        <p class="t-lead muted">Начните бесплатно. Полный доступ стоит {{ s.price_per_seat_rub|rub }} в месяц за руководителя — одному или всем штабом. Цена за человека одна: в штабе вы просто платите за всех одним счётом.</p>
       </div>
       <div class="tariffs">
         <article class="tcard">
@@ -486,8 +488,8 @@
           <p class="tcard__price"><span class="t-stat">0 ₽</span><span class="muted">без срока</span></p>
           <a class="btn btn--secondary" href="/register">Начать бесплатно</a>
           <ul class="tcard__list">
-            <li><b>3 разбора</b> ситуаций в месяц</li>
-            <li><b>5 голосовых</b> сообщений в месяц</li>
+            <li><b>{{ s.free_plans_per_month|plural('разбор', 'разбора', 'разборов') }}</b> ситуаций в месяц</li>
+            <li><b>{{ s.voice_free_per_month }} голосовых</b> сообщений в месяц</li>
             <li>Все режимы наставника: план, подготовка разговора, разбор после дела</li>
             <li>Штаб и общие задачи без ограничений</li>
           </ul>
@@ -495,22 +497,22 @@
         <article class="tcard is-featured">
           <h3>Полный <span class="tcard__badge">для руководителя</span></h3>
           <p class="tcard__for">Разбирать ситуации каждую неделю</p>
-          <p class="tcard__price"><span class="t-stat">1 500 ₽</span><span class="muted">в месяц</span></p>
+          <p class="tcard__price"><span class="t-stat">{{ s.price_per_seat_rub|rub }}</span><span class="muted">в месяц</span></p>
           <a class="btn btn--primary" href="/register?next=/billing">Подключить</a>
           <ul class="tcard__list">
-            <li><b>30 разборов</b> ситуаций в месяц</li>
-            <li><b>30 голосовых</b> сообщений в месяц</li>
+            <li><b>{{ s.monthly_plan_limit|plural('разбор', 'разбора', 'разборов') }}</b> ситуаций в месяц</li>
+            <li><b>{{ s.voice_per_month }} голосовых</b> сообщений в месяц</li>
             <li>Память о людях и уроках из прошлых разборов</li>
-            <li>Нужно больше — <b>+10 разборов за 590 ₽</b>, не сгорают</li>
+            <li>Нужно больше — <b>+{{ s.pack_size|plural('разбор', 'разбора', 'разборов') }} за {{ s.pack_price_rub|rub }}</b>, не сгорают</li>
           </ul>
         </article>
         <article class="tcard">
           <h3>Штаб</h3>
           <p class="tcard__for">Полный доступ для каждого в команде</p>
-          <p class="tcard__price"><span class="t-stat" data-shtab-total>4 500 ₽</span><span class="muted">в месяц</span></p>
+          <p class="tcard__price"><span class="t-stat" data-shtab-total>{{ (3 * s.price_per_seat_rub)|rub }}</span><span class="muted">в месяц</span></p>
           <div class="stepper" role="group" aria-label="Сколько человек в штабе">
             <button type="button" class="stepper__btn" data-shtab-step="-1" aria-label="Меньше">−</button>
-            <span class="stepper__val"><b data-shtab-n>3</b> <span data-shtab-word>руководителя</span> × 1 500 ₽</span>
+            <span class="stepper__val"><b data-shtab-n>3</b> <span data-shtab-word>руководителя</span> × {{ s.price_per_seat_rub|rub }}</span>
             <button type="button" class="stepper__btn" data-shtab-step="1" aria-label="Больше">+</button>
           </div>
           <a class="btn btn--secondary" href="/register?next=/shtab">Собрать штаб</a>
@@ -518,7 +520,7 @@
             <li>У каждого участника — всё из «Полного»</li>
             <li>Глава штаба платит за всех одним счётом</li>
             <li>Участники входят по ссылке-приглашению</li>
-            <li>Оплата картой, через СБП или по счёту для организации</li>
+            <li>Оплата картой, через СБП{% if TBANK %} или T-Pay{% endif %}. Для организаций доступен запрос счёта</li>
           </ul>
         </article>
       </div>
@@ -527,17 +529,17 @@
           <caption>Что входит</caption>
           <thead><tr><th scope="col"></th><th scope="col">Бесплатно</th><th scope="col">Полный</th><th scope="col">Штаб</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Разборов ситуаций в месяц</th><td>3</td><td>30</td><td>30 у каждого</td></tr>
-            <tr><th scope="row">Голосовых сообщений в месяц, до 30 секунд</th><td>5</td><td>30</td><td>30 у каждого</td></tr>
+            <tr><th scope="row">Разборов ситуаций в месяц</th><td>{{ s.free_plans_per_month }}</td><td>{{ s.monthly_plan_limit }}</td><td>{{ s.monthly_plan_limit }} у каждого</td></tr>
+            <tr><th scope="row">Голосовых сообщений в месяц, до {{ s.voice_max_seconds }} секунд</th><td>{{ s.voice_free_per_month }}</td><td>{{ s.voice_per_month }}</td><td>{{ s.voice_per_month }} у каждого</td></tr>
             <tr><th scope="row">План: обстановка, причина, шаги, риски, сроки</th><td>✓</td><td>✓</td><td>✓</td></tr>
             <tr><th scope="row">Подготовка трудного разговора и разбор после дела</th><td>✓</td><td>✓</td><td>✓</td></tr>
             <tr><th scope="row">Файлы к ситуации: Word, PDF, текст, CSV</th><td>✓</td><td>✓</td><td>✓</td></tr>
             <tr><th scope="row">Приказ для печати, шаги в календарь, напоминания</th><td>✓</td><td>✓</td><td>✓</td></tr>
-            <tr><th scope="row">Дополнительные разборы: 10 за 590 ₽</th><td>—</td><td>✓</td><td>✓</td></tr>
+            <tr><th scope="row">Дополнительные разборы · {{ s.pack_size }} за {{ s.pack_price_rub|rub }}</th><td>—</td><td>✓</td><td>✓</td></tr>
             <tr><th scope="row">Один счёт на команду, оплата по счёту</th><td>—</td><td>—</td><td>✓</td></tr>
           </tbody>
         </table>
-        <p class="t-small muted">Доступ продлевается каждые 30 дней, автопродление отключается в любой момент. Условия — в <a href="/offer">оферте</a>.</p>
+        <p class="t-small muted">{% if TBANK %}Доступ на 30 дней открывается после оплаты. Следующий период можно оплатить вручную.{% else %}Доступ продлевается каждые 30 дней. Автопродление отключается в любой момент.{% endif %}{% if not s.checkout_enabled %} Приём онлайн-оплаты готовится к запуску.{% endif %} <a href="/payment">Условия оплаты и возврата</a>.</p>
       </div>
     </div>
   </section>
@@ -552,7 +554,7 @@
           <div class="qa__ask">
             <span class="mark qa__mark" data-mark="arc" aria-hidden="true"></span>
             <p><b>Не нашли ответ?</b><br>Напишите нам, разберёмся вместе.</p>
-            <a class="qa__mail" href="mailto:info@oginst.ru">info@oginst.ru<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6h8M5.5 2.5 9 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a class="qa__mail" href="mailto:{{ MERCHANT.email }}">{{ MERCHANT.email }}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6h8M5.5 2.5 9 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
           </div>
         </div>
         <div class="qa__list">
@@ -574,11 +576,11 @@
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">05</span><span class="qa__q">Как оплатить штаб?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>Глава штаба платит за всех одним платежом: 1 500 ₽ в месяц за каждого участника. Участники входят по ссылке-приглашению. Организация может оплатить по счёту.</p></div>
+            <div class="qa__a"><p>Глава штаба платит за всех одним платежом: {{ s.price_per_seat_rub|rub }} в месяц за каждого участника. Участники входят по ссылке-приглашению. Организация может оплатить по счёту.</p></div>
           </details>
           <details class="qa__item" name="faq">
-            <summary><span class="qa__num">06</span><span class="qa__q">Можно ли отменить подписку?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>Да, в любой момент: автопродление отключается в разделе «Тариф». Оплаченный месяц доработает до конца, а за неиспользованные дни можно вернуть деньги по заявлению.</p></div>
+            <summary><span class="qa__num">06</span><span class="qa__q">Как отказаться от оплаченного доступа?</span><span class="qa__icon" aria-hidden="true"></span></summary>
+            <div class="qa__a"><p>Напишите нам, чтобы отказаться от полного тарифа и вернуть деньги за полные неиспользованные дни. <a href="/payment#refund">Как оформить возврат</a>.{% if not TBANK %} Автопродление отключается в разделе «Тариф».{% endif %}</p></div>
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">07</span><span class="qa__q">Где хранятся мои данные?</span><span class="qa__icon" aria-hidden="true"></span></summary>
@@ -586,7 +588,7 @@
           </details>
           <details class="qa__item" name="faq">
             <summary><span class="qa__num">08</span><span class="qa__q">Кто стоит за сервисом?</span><span class="qa__icon" aria-hidden="true"></span></summary>
-            <div class="qa__a"><p>«Наука побеждать · Штаб» создан в Открытом гуманитарном институте (АНО ВО «ОГИ»). Метод опирается на суворовские правила — глазомер, быстрота, натиск — переложенные на задачи современного руководителя.</p></div>
+            <div class="qa__a"><p>«Наука побеждать · Штаб» создан в Открытом гуманитарном институте (АНО ВО «ОГИ»). {% if TBANK %}Доступ к сервису предоставляет {{ MERCHANT.short }}. {% endif %}Метод опирается на суворовские правила — глазомер, быстрота, натиск — переложенные на задачи современного руководителя.</p></div>
           </details>
         </div>
       </div>
@@ -599,7 +601,7 @@
     <div class="closing__cta close--type">
       <div class="section-head">
         <h2 id="close-h">Разберите первую ситуацию сегодня</h2>
-        <p class="t-small muted">Бесплатно — 3 разбора в месяц. Полный доступ — 1 500 ₽ в месяц.</p>
+        <p class="t-small muted">Бесплатно — {{ s.free_plans_per_month|plural('разбор', 'разбора', 'разборов') }} в месяц. Полный доступ — {{ s.price_per_seat_rub|rub }} в месяц.</p>
       </div>
       <a class="btn btn--primary btn--xl btn--wide" href="/register">Начать бесплатно<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
     </div>
@@ -613,9 +615,16 @@
         <div class="span-2 footer__col"><h3>Команда</h3><ul><li><a href="#shtab">Штаб</a></li><li><a href="#method">Метод</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">FAQ</a></li></ul></div>
       </div>
-      <div class="footer__legal">
-        <span>&copy; 2026 АНО ВО «ОГИ», ИНН 9710113703, ОГРН 1237700304126 &nbsp; <a href="/offer">Оферта</a> &nbsp; <a href="/privacy">Персональные данные</a> &nbsp; <a href="mailto:info@oginst.ru">info@oginst.ru</a></span>
-        <div class="socials"></div>
+      <div class="footer__legal merchant-foot">
+        <span>© 2026 {{ MERCHANT.short }} · ИНН {{ MERCHANT.inn }} · {{ MERCHANT.registration_label }} {{ MERCHANT.ogrn }}</span>
+        <address>Для обращений: {{ MERCHANT.address }} · <a href="tel:{{ MERCHANT.phone|replace(' ', '')|replace('(', '')|replace(')', '')|replace('-', '') }}">{{ MERCHANT.phone }}</a></address>
+        {% include "_legal_links.html" %}
+        {% if TBANK %}
+        <div>
+          <span>{{ 'Способы оплаты' if s.checkout_enabled else 'Способы оплаты после подключения' }}</span>
+          {% include "_payment_logos.html" %}
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -633,7 +642,7 @@
   const fmt = v => v.toLocaleString('ru-RU').replace(/\u00a0|\s/g, '\u00a0') + '\u00a0₽';
   const w = k => (k % 10 === 1 && k % 100 !== 11) ? 'руководитель' : (k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 10 || k % 100 >= 20)) ? 'руководителя' : 'руководителей';
   let k = 3;
-  const draw = () => { n.textContent = k; word.textContent = w(k); total.textContent = fmt(k * 1500);
+  const draw = () => { n.textContent = k; word.textContent = w(k); total.textContent = fmt(k * {{ s.price_per_seat_rub|tojson }});
     btns[0].disabled = k <= 2; btns[1].disabled = k >= 50; };
   btns.forEach(b => b.addEventListener('click', () => { k = Math.min(50, Math.max(2, k + Number(b.dataset.shtabStep))); draw(); }));
   draw();

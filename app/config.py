@@ -1,5 +1,6 @@
 """Settings, read from the environment (.env on the server)."""
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -66,6 +67,20 @@ class Settings(BaseSettings):
     max_out_plan: int = 1400
     max_out_talk: int = 600
 
+    # Choose which provider handles new orders. Existing YooKassa orders keep their credentials.
+    payment_provider: Literal["yookassa", "tbank"] = "yookassa"
+    personal_data_operator: Literal["ogi", "ip"] = "ogi"
+    merchant_email: str = ""
+    merchant_phone: str = ""
+    merchant_postal_address: str = ""
+    merchant_rkn_number: str = ""
+
+    tbank_terminal_key: str = ""
+    tbank_password: str = ""
+    tbank_taxation: Literal["", "osn", "usn_income", "usn_income_outcome", "esn", "patent"] = ""
+    tbank_vat: str = ""
+    tbank_ffd: Literal["1.05", "1.2"] = "1.05"
+
     # YooKassa
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
@@ -77,7 +92,25 @@ class Settings(BaseSettings):
 
     @property
     def billing_enabled(self) -> bool:
+        if self.payment_provider == "tbank":
+            return bool(
+                self.tbank_credentials and self.tbank_taxation
+                and self.tbank_vat in {"none", "vat0", "vat5", "vat7", "vat10", "vat22"}
+                and self.base_url.startswith("https://")
+            )
+        return self.yookassa_enabled
+
+    @property
+    def tbank_credentials(self) -> bool:
+        return bool(self.tbank_terminal_key and self.tbank_password)
+
+    @property
+    def yookassa_enabled(self) -> bool:
         return bool(self.yookassa_shop_id and self.yookassa_secret_key)
+
+    @property
+    def checkout_enabled(self) -> bool:
+        return self.billing_enabled and not self.free_beta
 
 
 @lru_cache

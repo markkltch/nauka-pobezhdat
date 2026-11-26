@@ -7,14 +7,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
+import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, files, jobs, legal, llm, mentor, speech, yandex_id
+from . import access, auth, billing, files, jobs, legal, llm, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
 from .models import LEVELS, Lesson, Member, Person, Plan, Shtab, Situation, Step, Usage, User, now
@@ -38,8 +39,7 @@ app = FastAPI(title="Наука побеждать", docs_url=None, redoc_url=No
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.globals.update(LEVELS=LEVELS, settings=get_settings, yandex_id_enabled=yandex_id.enabled,
-                             OUTCOMES=mentor.OUTCOMES, BRAND="Наука побеждать · Штаб",
-                             LEGAL=legal.OPERATOR, PROCESSORS=legal.PROCESSORS, EDITION=legal.EDITION)
+                             OUTCOMES=mentor.OUTCOMES, BRAND="Наука побеждать · Штаб")
 
 
 def _ru_date(d: dt.date | None) -> str:
@@ -66,8 +66,13 @@ def _to_login(request: Request, exc: auth.LoginRequired):
     return RedirectResponse(f"/login?next={quote(request.url.path)}", status_code=303)
 
 
+@app.exception_handler(auth.ConsentRequired)
+def _to_consent(request: Request, exc: auth.ConsentRequired):
+    return see_other("/privacy/confirm?next=" + quote(request.url.path, safe=""))
+
+
 def page(request: Request, name: str, **ctx):
-    return templates.TemplateResponse(request, name, ctx)
+    return templates.TemplateResponse(request, name, {**legal.current(), **ctx})
 
 
 def auth_token() -> str:
@@ -77,7 +82,7 @@ def auth_token() -> str:
 
 
 def safe_next(url: str | None) -> str:
-    return url if url and url.startswith("/") and not url.startswith("//") else "/app"
+    return url if url and url.startswith("/") and not url.startswith(("//", "/\\")) else "/app"
 
 
 def see_other(url: str) -> RedirectResponse:
@@ -87,8 +92,13 @@ def see_other(url: str) -> RedirectResponse:
 # ---------- public ----------
 
 @app.get("/", response_class=HTMLResponse)
-def landing():
-    return FileResponse(HERE / "static" / "landing" / "index.html")
+def landing(request: Request):
+    return page(request, "landing.html")
+
+
+@app.get("/payment", response_class=HTMLResponse)
+def payment_terms(request: Request):
+    return page(request, "legal_payment.html")
 
 
 @app.get("/healthz")
@@ -109,6 +119,26 @@ def privacy(request: Request):
 @app.get("/consent", response_class=HTMLResponse)
 def consent(request: Request):
     return page(request, "legal_consent.html")
+
+
+@app.get("/privacy/confirm", response_class=HTMLResponse)
+def consent_form(request: Request, next: str = "/app", user: User = Depends(auth.require_session)):
+    if user.ip_consent_at or get_settings().personal_data_operator != "ip":
+        return see_other(safe_next(next))
+    return page(request, "privacy_confirm.html", next=safe_next(next))
+
+
+@app.post("/privacy/confirm")
+def consent_save(request: Request, next: str = Form("/app"), consent: str = Form(""),
+                 user: User = Depends(auth.require_session), db: Session = Depends(get_db)):
+    if get_settings().personal_data_operator != "ip":
+        return see_other(safe_next(next))
+    if consent != "yes":
+        return page(request, "privacy_confirm.html", next=safe_next(next), error=True)
+    if not user.ip_consent_at:
+        user.ip_consent_at = now()
+        db.commit()
+    return see_other(safe_next(next))
 
 
 # ---------- sign-in ----------
@@ -153,7 +183,8 @@ def register_send(request: Request, email: str = Form(...), name: str = Form("")
         return page(request, "login.html", error="Без согласия на обработку данных зарегистрироваться нельзя", **again)
     if auth.account_exists(db, email):
         return page(request, "login.html", exists=True, **again)
-    auth.start_login(db, email, safe_next(next), name=name, password=password)
+    auth.start_login(db, email, safe_next(next), name=name, password=password,
+                     ip_consent=get_settings().personal_data_operator == "ip")
     return page(request, "login.html", next=safe_next(next), tab="register", step="code", email=email)
 
 
@@ -166,18 +197,22 @@ def login_send(request: Request, email: str = Form(...), consent: str = Form("")
     again = dict(next=safe_next(next), tab="login", step="email", email=email)
     if "@" not in email or "." not in email.split("@")[-1]:
         return page(request, "login.html", error="Проверьте адрес почты", **again)
-    if not auth.account_exists(db, email) and not consent:
+    exists = auth.account_exists(db, email)
+    if not exists and not consent:
         return page(request, "login.html", noacc=True, **again)
-    auth.start_login(db, email, safe_next(next))
+    auth.start_login(db, email, safe_next(next),
+                     ip_consent=bool(not exists and consent and get_settings().personal_data_operator == "ip"))
     return page(request, "login.html", next=safe_next(next), tab="login", step="code", email=email)
 
 
 def _signed_in(db: Session, user: User, next_url: str) -> RedirectResponse:
-    if not user.consent_at:
+    if not user.consent_at and get_settings().personal_data_operator == "ogi":
         user.consent_at = now()
         db.commit()
     sess = auth.open_session(db, user)
     target = "/onboarding?next=" + quote(next_url) if not user.level else next_url
+    if get_settings().personal_data_operator == "ip" and not user.ip_consent_at:
+        target = "/privacy/confirm?next=" + quote(target, safe="")
     resp = see_other(target)
     secure = get_settings().base_url.startswith("https://")
     resp.set_cookie(auth.COOKIE, sess.id, max_age=int(auth.SESSION_TTL.total_seconds()), httponly=True,
@@ -245,7 +280,7 @@ def yandex_start(next: str = "/app", consent: str = "", link: str = "",
     if not yandex_id.enabled():
         return see_other("/login")
     state = auth_token()
-    mode = "link" if (link and user) else ("register" if consent else "login")
+    mode = "link" if (link and user) else ("register-" + get_settings().personal_data_operator if consent else "login")
     resp = see_other(yandex_id.authorize_url(state))
     resp.set_cookie("ya_state", f"{state}|{mode}|{safe_next(next)}", max_age=600, httponly=True, samesite="lax",
                     secure=get_settings().base_url.startswith("https://"))
@@ -265,6 +300,8 @@ def yandex_callback(request: Request, code: str = "", state: str = "", error: st
         logging.getLogger("yandex_id").exception("Yandex ID sign-in failed")
         return see_other("/login?yerr=failed")
     if mode == "link" and user:
+        if get_settings().personal_data_operator == "ip" and not user.ip_consent_at:
+            return see_other("/privacy/confirm?next=/settings")
         other = db.scalars(select(User).where(User.yandex_id == prof["id"], User.id != user.id)).first()
         if other:
             return see_other("/settings?msg=ya_taken")
@@ -277,11 +314,12 @@ def yandex_callback(request: Request, code: str = "", state: str = "", error: st
         if not found:
             found = db.scalars(select(User).where(User.email == prof["email"])).first()
         if not found:
-            if mode != "register":  # signing in, not up: the consent box is on the sign-up form
+            if mode != "register-" + get_settings().personal_data_operator:
                 resp = see_other(f"/register?yerr=noacc&email={quote(prof['email'])}&next={quote(safe_next(next_url))}")
                 resp.delete_cookie("ya_state")
                 return resp
-            found = User(email=prof["email"], name=prof["name"][:120])
+            found = User(email=prof["email"], name=prof["name"][:120],
+                         ip_consent_at=now() if mode == "register-ip" else None)
             db.add(found)
         found.yandex_id = prof["id"]
         db.commit()
@@ -713,14 +751,19 @@ def shtab_join(invite_token: str, user: User = Depends(auth.require_user), db: S
 # ---------- billing ----------
 
 @app.get("/billing", response_class=HTMLResponse)
-def billing_page(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+def billing_page(request: Request, error: str = "", user: User = Depends(auth.require_user),
+                 db: Session = Depends(get_db)):
     from .models import Subscription
 
     owned = db.scalars(select(Shtab).where(Shtab.owner_id == user.id)).all()
-    subs = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.status == "active",
-                                                Subscription.paid_until > now())).all()
+    paid = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.status == "active",
+                                                Subscription.paid_until > now())
+                      .order_by(Subscription.paid_until.desc())).all()
+    subs = list({sub.shtab_id: sub for sub in reversed(paid)}.values()) if get_settings().payment_provider == "tbank" else paid
     return page(request, "billing.html", user=user, owned=owned, plan=access.summary(db, user), subs=subs,
-                shtab_names={sh.id: sh.name for sh in owned}, enabled=get_settings().billing_enabled)
+                shtab_names={sh.id: sh.name for sh in owned}, enabled=get_settings().checkout_enabled,
+                personal_sub=next((sub for sub in subs if sub.shtab_id is None), None),
+                payment_error=error == "unavailable")
 
 
 @app.post("/billing/cancel/{sub_id}")
@@ -738,49 +781,82 @@ def billing_cancel(sub_id: int, user: User = Depends(auth.require_user), db: Ses
 
 @app.post("/billing/pack")
 def billing_pack(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    if not get_settings().billing_enabled or access.tier(db, user) != access.PRO:
+    if not get_settings().checkout_enabled or access.tier(db, user) != access.PRO:
         return see_other("/billing")
-    return see_other(billing.start_pack(db, user))
+    try:
+        return see_other(billing.start_pack(db, user))
+    except (tbank.PaymentError, httpx.HTTPError):
+        logging.getLogger("billing").warning("Could not start pack checkout")
+        return see_other("/billing?error=unavailable")
+
+
+def _payment_result(request: Request, db: Session, provider_id: str):
+    try:
+        status = billing.sync_payment(db, provider_id)
+    except (tbank.PaymentError, httpx.HTTPError):
+        status = "pending"
+    return page(request, "billing_result.html", status=status)
 
 
 @app.get("/billing/pack/{order_id}")
-def billing_pack_return(order_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+def billing_pack_return(request: Request, order_id: int, user: User = Depends(auth.require_user),
+                        db: Session = Depends(get_db)):
     from .models import PackOrder
 
     order = db.get(PackOrder, order_id)
-    if order and order.user_id == user.id and order.provider_id:
-        billing.sync_payment(db, order.provider_id)
-    return see_other("/app")
+    if not order or order.user_id != user.id or not order.provider_id:
+        raise HTTPException(404)
+    return _payment_result(request, db, order.provider_id)
 
 
 @app.post("/billing/start")
 def billing_start(shtab_id: int = Form(0), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    if not get_settings().billing_enabled:
+    if not get_settings().checkout_enabled:
         return see_other("/billing")
     shtab = None
     if shtab_id:
         shtab = db.get(Shtab, shtab_id)
         if not shtab or shtab.owner_id != user.id:
             raise HTTPException(404)
-    return see_other(billing.start_payment(db, user, shtab))
+    try:
+        return see_other(billing.start_payment(db, user, shtab))
+    except (tbank.PaymentError, httpx.HTTPError):
+        logging.getLogger("billing").warning("Could not start access checkout")
+        return see_other("/billing?error=unavailable")
 
 
 @app.get("/billing/return/{sub_id}")
-def billing_return(sub_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    from .models import Payment
+def billing_return(request: Request, sub_id: int, user: User = Depends(auth.require_user),
+                   db: Session = Depends(get_db)):
+    from .models import Payment, Subscription
 
-    for pay in db.scalars(select(Payment).where(Payment.subscription_id == sub_id)).all():
-        billing.sync_payment(db, pay.provider_id)
-    return see_other("/app")
+    sub = db.get(Subscription, sub_id)
+    if not sub or sub.payer_id != user.id:
+        raise HTTPException(404)
+    pay = db.scalars(select(Payment).where(Payment.subscription_id == sub_id).order_by(Payment.id.desc())).first()
+    return _payment_result(request, db, pay.provider_id) if pay else see_other("/billing")
 
 
 @app.post("/billing/webhook")
 async def billing_webhook(request: Request, db: Session = Depends(get_db)):
     body = await request.json()
     pid = (body.get("object") or {}).get("id")
-    if pid:
+    if isinstance(pid, str) and not pid.startswith(tbank.PREFIX):
         billing.sync_payment(db, pid)  # re-reads the payment from YooKassa; the body itself is not trusted
     return JSONResponse({"ok": True})
+
+
+@app.post("/billing/tbank/webhook", response_class=PlainTextResponse)
+def tbank_webhook(payload: dict, db: Session = Depends(get_db)):
+    key = tbank.notification_key(payload)
+    if not key:
+        raise HTTPException(403)
+    try:
+        if payload.get("Status") in tbank.FINAL_STATUSES and billing.sync_payment(db, key) == "pending":
+            raise tbank.PaymentError("T-Bank has not finalized the payment yet")
+    except tbank.PaymentError as exc:
+        raise HTTPException(503, "Проверка платежа временно недоступна") from exc
+    return "OK"
 
 
 # ---------- owner's page ----------

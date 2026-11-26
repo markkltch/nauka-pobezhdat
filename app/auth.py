@@ -24,11 +24,16 @@ class LoginRequired(Exception):
     """Raised for pages that need a signed-in user; main.py turns it into a redirect."""
 
 
+class ConsentRequired(Exception):
+    """The signed-in user has yet to consent to processing by the new operator."""
+
+
 def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-def start_login(db: Session, email: str, next_url: str = "/app", name: str = "", password: str = "") -> None:
+def start_login(db: Session, email: str, next_url: str = "/app", name: str = "", password: str = "",
+                ip_consent: bool = False) -> None:
     """Mails a one-time code. With name/password it is a sign-up: they are kept with the code and
     reach the account only once the code proves the address."""
     email = normalize_email(email)
@@ -40,11 +45,14 @@ def start_login(db: Session, email: str, next_url: str = "/app", name: str = "",
     if recent:  # one letter a minute per address; the code already sent still works
         if name or pending_pw:
             recent.pending_name, recent.pending_password = name[:120], pending_pw
+        if ip_consent:
+            recent.pending_ip_consent = True
+        if name or pending_pw or ip_consent:
             db.commit()
         return
     code = f"{secrets.randbelow(10**6):06d}"
     row = LoginCode(email=email, code=code, expires_at=now() + CODE_TTL, pending_name=name[:120],
-                    pending_password=pending_pw)
+                    pending_password=pending_pw, pending_ip_consent=ip_consent)
     db.add(row)
     db.commit()
     link = f"{get_settings().base_url}/login/link/{row.link_token}?next={next_url}"
@@ -69,6 +77,8 @@ def _apply_pending(db: Session, user: User, row: LoginCode) -> User:
     if row.pending_password and not user.password_hash:
         user.password_hash = row.pending_password
         user.failed_logins, user.locked_until = 0, None
+    if row.pending_ip_consent and not user.ip_consent_at:
+        user.ip_consent_at = now()
     db.commit()
     return user
 
@@ -132,9 +142,15 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User | None
     return db.get(User, sess.user_id)
 
 
-def require_user(user: User | None = Depends(current_user)) -> User:
+def require_session(user: User | None = Depends(current_user)) -> User:
     if not user:
         raise LoginRequired()
+    return user
+
+
+def require_user(user: User = Depends(require_session)) -> User:
+    if get_settings().personal_data_operator == "ip" and not user.ip_consent_at:
+        raise ConsentRequired()
     return user
 
 
