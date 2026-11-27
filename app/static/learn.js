@@ -234,23 +234,48 @@
     } });
   }
 
+  // pairs: each rule gets a button showing its chosen example in full (it wraps, unlike a select);
+  // pressing it opens the examples under it, picking one fills it and moves on to the next empty rule
   function match(it) {
     stageEl.append(el('h1', { class: 'uc-q', text: it.q }));
+    const EMPTY = 'Выберите пару';
     const rows = it.pairs.map(([left], i) => {
-      const sel = el('select', { 'aria-label': `Пара для: ${left}`, onchange: () => { primary.disabled = selects.some((s) => !s.value); } },
-        el('option', { value: '', text: 'Выберите…' }), it.rights.map((r) => el('option', { value: r, text: r })));
-      const row = el('div', { class: 'uc-matchrow' }, el('span', { text: left }), sel);
-      row._sel = sel; row._right = it.pairs[i][1];
+      const btn = el('button', { type: 'button', class: 'uc-matchpick', 'aria-expanded': 'false', text: EMPTY });
+      const list = el('div', { class: 'uc-matchlist', role: 'group', 'aria-label': `Пары для: ${left}`, hidden: true },
+        it.rights.map((r) => el('button', { type: 'button', class: 'uc-matchopt', 'aria-pressed': 'false', text: r, onclick: () => choose(row, r) })));
+      const row = el('div', { class: 'uc-matchrow' }, el('span', { text: left }), btn, list);
+      btn.addEventListener('click', () => open(row, row._list.hidden));
+      Object.assign(row, { _value: '', _right: it.pairs[i][1], _btn: btn, _list: list });
       return row;
     });
-    const selects = rows.map((r) => r._sel);
+    function open(row, on) {
+      rows.forEach((r) => { r._list.hidden = true; r._btn.setAttribute('aria-expanded', 'false'); });
+      if (row && on) { row._list.hidden = false; row._btn.setAttribute('aria-expanded', 'true'); }
+    }
+    function refresh() {
+      const used = new Set(rows.map((r) => r._value).filter(Boolean));
+      rows.forEach((r) => r._list.querySelectorAll('button').forEach((b) => {
+        const mine = r._value === b.textContent;
+        b.setAttribute('aria-pressed', String(mine)); b.classList.toggle('is-used', used.has(b.textContent) && !mine);
+      }));
+      primary.disabled = rows.some((r) => !r._value);
+    }
+    function choose(row, value) {
+      rows.forEach((r) => { if (r !== row && r._value === value) { r._value = ''; r._btn.textContent = EMPTY; r._btn.classList.remove('is-set'); } });
+      row._value = value; row._btn.textContent = value; row._btn.classList.add('is-set');
+      const nextRow = rows.find((r) => !r._value);
+      open(nextRow, true); refresh();
+      (nextRow ? nextRow._list.querySelector('button') : primary).focus();
+    }
     stageEl.append(el('div', { style: 'display:grid;gap:8px' }, rows));
     bar({ hint: 'Для каждого правила — свой пример', label: 'Проверить', disabled: true, onClick: () => {
       let ok = true;
-      rows.forEach((r) => { const good = r._sel.value === r._right; if (!good) ok = false; r.classList.add(good ? 'is-right' : 'is-wrong'); r._sel.disabled = true;
-        if (!good) r.append(el('span', { style: 'grid-column:1/-1;font-size:14px;color:#23452f', text: `Верно: ${r._right}` })); });
+      open(null);
+      rows.forEach((r) => { const good = r._value === r._right; if (!good) ok = false; r.classList.add(good ? 'is-right' : 'is-wrong'); r._btn.disabled = true;
+        if (!good) r.append(el('span', { class: 'uc-matchfix', text: `Верно: ${r._right}` })); });
       verdict(it, ok, ok ? 'Все пары верны.' : 'Посмотрите верные пары на экране.');
     } });
+    open(rows[0], true);
   }
 
   function verdict(it, ok, text, pick) {

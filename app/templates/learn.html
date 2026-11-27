@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_uc.html" import ic, bar, week %}
 {% block title %}Учение — {{ BRAND }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=2">{% endblock %}
 {% from "_quick.html" import quick %}
 {% block body %}
 <a class="skip-link" href="#learn">К учению</a>
@@ -75,7 +75,7 @@
             <div class="uc-hero__row"><a class="uc-btn-gold" href="/billing">Полный доступ{{ ic('arrow') }}</a></div>
             {% else %}
             <p class="uc-label">Путь</p>
-            <h2 id="next-h">Следующие этапы готовятся</h2>
+            <h2 id="next-h">{% if rec.done %}Путь пройден{% else %}Следующие этапы готовятся{% endif %}</h2>
             <p>{{ rec.why }}</p>
             {% endif %}
           </section>

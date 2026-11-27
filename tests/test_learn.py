@@ -26,7 +26,7 @@ def test_content_is_consistent():
 
     q = quotes()
     assert len(c["stages"]) == 9 and c["total"] == 27
-    for s in c["stages"][:2]:
+    for s in c["stages"]:
         assert s["ready"]
         for les in s["lesson_list"]:
             assert les["ready"] and les["quote"] in q and les["words"]["model"] and les["order"]["title"]
@@ -54,7 +54,7 @@ def _results(lid, ok=True):
 def test_learn_flow(client):
     sign_in(client, "learner@example.ru")
     page = client.get("/learn").text
-    assert "Учение" in page and "вступительного смотра" in page and "Постановка задач" in page and "Готовятся" in page
+    assert "Учение" in page and "вступительного смотра" in page and "Постановка задач" in page and "Перспектива" in page and "Готовятся" not in page
     assert client.get("/learn/start").status_code == 200
     r = client.post("/learn/start", json={"picks": {f"d{i}": 2 for i in range(9)} | {"d3": 0}})
     assert r.json()["next"] == "/learn/map"

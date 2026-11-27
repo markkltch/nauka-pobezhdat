@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_uc.html" import ic %}
 {% block title %}{{ title }} — Учение — {{ BRAND }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=2">{% endblock %}
 {% block body %}
 <div class="uc-player" data-player>
   <header class="uc-player__bar">
@@ -58,5 +58,5 @@
   </footer>
 </div>
 <script type="application/json" id="uc-data">{{ payload|tojson }}</script>
-<script src="/static/learn.js?v=1" defer></script>
+<script src="/static/learn.js?v=2" defer></script>
 {% endblock %}

@@ -380,6 +380,8 @@ def recommend(db: Session, user: User, done: set[str], tests: dict, sigs: dict, 
         return {"kind": "review", "count": len(due), "why": f"Пора повторить: {len(due)} упражнений."}
     if les and not stage_open(db, user, les["stage"]):
         return {"kind": "locked", "lesson": les, "why": "Этап открыт на полном доступе."}
+    if all(st["ready"] for st in course()["stages"]):
+        return {"kind": "wait", "done": True, "why": "Все девять этапов пройдены. Повторяйте, исполняйте приказы и доделайте задания этапов."}
     return {"kind": "wait", "why": "Следующие этапы готовятся. Пока повторяйте и исполняйте приказы."}
 
 

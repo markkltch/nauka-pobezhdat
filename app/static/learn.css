@@ -385,3 +385,19 @@
   .uc-ladder li > span { display: none; }
   [role="region"] > .uc-team { min-width: 540px; }
 }
+
+/* pairs: a wrapping button per rule, the examples open under it */
+.uc-matchpick { position: relative; width: 100%; min-height: 48px; padding: 11px 40px 11px 14px; border-radius: 10px; border: 1.5px dashed var(--line-strong);
+  background: var(--bg); color: var(--muted); font: 400 15px/1.4 var(--font-text); text-align: left; cursor: pointer; }
+.uc-matchpick::after { content: ""; position: absolute; right: 16px; top: 50%; width: 8px; height: 8px; margin-top: -6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .15s; }
+.uc-matchpick[aria-expanded="true"]::after { transform: rotate(-135deg); margin-top: -2px; }
+.uc-matchpick.is-set { border-style: solid; color: var(--ink); }
+.uc-matchpick:disabled { cursor: default; opacity: 1; }
+.uc-matchpick:disabled::after { display: none; }
+.uc-matchlist { display: grid; gap: 6px; }
+.uc-matchlist[hidden] { display: none; }
+.uc-matchopt { padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fffdf8; color: var(--ink); font: 400 15px/1.4 var(--font-text); text-align: left; cursor: pointer; }
+.uc-matchopt:hover { border-color: var(--ink); }
+.uc-matchopt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.uc-matchopt.is-used { color: var(--muted); }
+.uc-matchfix { font-size: 14px; color: #23452f; }
