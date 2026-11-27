@@ -153,6 +153,9 @@ class Fake:
             text = json.dumps({"verdict": "partial", "summary": "Опоздания сократились, но не исчезли.",
                                "lesson": "Правило работает, когда его проверяют каждый день, а не раз в неделю.",
                                "next": "Ещё неделю отмечайте приход ежедневно."}, ensure_ascii=False)
+        elif "РЕЖИМ: УЧЕНИЕ" in system:
+            text = json.dumps({"ok": True, "good": "Суть схвачена: есть цель и проверка понимания.",
+                               "add": "Добавьте срок — без него задача остаётся пожеланием."}, ensure_ascii=False)
         else:
             text = "Хороший вопрос. Начните с первого шага плана сегодня и вернитесь ко мне с результатом."
         return Reply(text=text, model=f"fake-{tier}", tier=tier,

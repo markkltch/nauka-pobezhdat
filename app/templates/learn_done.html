@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic, week %}
+{% block title %}{% if kind == 'lesson' %}Урок пройден{% else %}Смотр этапа{% endif %} — Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<div class="uc-player">
+  <header class="uc-player__bar">
+    <a class="uc-close" href="/learn" aria-label="Вернуться в «Учение»">{{ ic('close') }}</a>
+    <div style="flex: 1"></div>
+    <span class="uc-xp">{{ ic('star') }}<b>{{ '{:,}'.format(ov.state.xp or 0).replace(',', ' ') }}</b></span>
+  </header>
+
+  <main class="uc-player__body" style="max-width: 680px">
+    <div class="uc-done">
+    {% if kind == 'lesson' %}
+      <span class="uc-medal" aria-hidden="true">{{ ic('check') }}</span>
+      <h1>Урок пройден</h1>
+      <p>{{ les.title|q }}.{% if order %} Приказ стоит{% if plan_title %} в плане «{{ plan_title }}»{% else %} отдельной задачей{% endif %} до {{ order.due|ru_date }}.{% else %} Приказ можно поставить позже, повторив урок.{% endif %}</p>
+      <div class="uc-tiles">
+        <div class="uc-tile uc-tile--gold"><b class="uc-num">+{{ last.xp }}</b><span>опыта</span></div>
+        <div class="uc-tile"><b class="uc-num">{{ last.right }} из {{ last.total }}</b><span>верно с первого раза</span></div>
+        <div class="uc-tile"><b class="uc-num">{{ last.seconds // 60 }}:{{ '%02d'|format(last.seconds % 60) }}</b><span>минуты</span></div>
+      </div>
+    {% else %}
+      {% if new_rank %}
+      <span class="uc-medal" aria-hidden="true" style="width: 148px; height: 148px">{{ ic('rank') }}</span>
+      <p class="uc-label" style="color: #6b5216">Этап {{ stage.n }} «{{ stage.name }}» пройден</p>
+      <h1>Вам присвоен чин {{ {'Рядовой':'рядового','Капрал':'капрала','Сержант':'сержанта','Прапорщик':'прапорщика','Поручик':'поручика','Капитан':'капитана','Майор':'майора','Полковник':'полковника','Генерал':'генерала'}.get(ov.rank_name, ov.rank_name|lower) }}</h1>
+      <p>Смотр сдан, приказ этапа исполнен. Чин дают только за дело вместе с уроками.</p>
+      <ol class="uc-ladder" aria-label="Чины" style="list-style: none; margin: 0; padding: 0; width: 100%; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px">
+        {% for r in L.course().ranks %}
+        <li style="display: grid; gap: 6px; justify-items: center; font-size: 11px; {% if loop.index0 == ov.rank %}color: #12201a; font-weight: 500{% else %}color: #46463e{% endif %}"><i style="width: 100%; height: 6px; border-radius: 3px; background: {% if loop.index0 == ov.rank %}#e9cf97; box-shadow: 0 0 0 2px #8a6a24{% elif loop.index0 < ov.rank %}#12201a{% else %}#e9e0cf{% endif %}"></i><span style="text-align: center; white-space: nowrap">{% if loop.index0 in (ov.rank, ov.rank + 1) %}{{ r }}{% else %}<span class="sr-only">{{ r }}</span>{% endif %}</span></li>
+        {% endfor %}
+      </ol>
+      {% elif mark.passed %}
+      <span class="uc-medal" aria-hidden="true">{{ ic('shield') }}</span>
+      <h1>Смотр сдан</h1>
+      <p>Этап {{ stage.n }} «{{ stage.name }}».{% if ov.rank_progress.next %} Для чина «{{ ov.rank_progress.next|lower }}» осталось: {% for name, ok in ov.rank_progress.parts if not ok %}{{ name|lower }}{% if not loop.last %}, {% endif %}{% else %}ничего{% endfor %}.{% endif %}</p>
+      {% else %}
+      <span class="uc-medal" aria-hidden="true" style="background: #e9e0cf; color: #12201a">{{ ic('repeat') }}</span>
+      <h1>Почти</h1>
+      <p>Нужно 80 %, у вас {{ mark.score }} из {{ mark.total }}. Упражнения с ошибками вернутся в повторении. Смотр можно пересдать в любой момент.</p>
+      {% endif %}
+      <div class="uc-tiles">
+        <div class="uc-tile"><b class="uc-num">{{ mark.score }} из {{ mark.total }}</b><span>смотр этапа</span></div>
+        <div class="uc-tile"><b class="uc-num">{{ ov.orders|selectattr('outcome', 'in', ['done', 'partial'])|list|length }}</b><span>приказов исполнено</span></div>
+        <div class="uc-tile uc-tile--gold"><b class="uc-num">+{{ 20 if mark.passed else 0 }}</b><span>опыта</span></div>
+      </div>
+    {% endif %}
+
+      <div class="uc-card" style="width: 100%; text-align: left; box-sizing: border-box">
+        <div class="uc-card__head"><h2 class="uc-h2" style="font-size: 17px">Боевой ряд: {{ ov.streak.days|plural('день', 'дня', 'дней') }}</h2><span class="uc-sub" style="margin: 0">{% if ov.minutes >= (ov.state.goal_min or 5) %}цель дня выполнена{% else %}цель дня: {{ ov.minutes }} из {{ ov.state.goal_min or 5 }} мин{% endif %}</span></div>
+        {{ week(ov.streak) }}
+      </div>
+
+      {% if ov.rank_progress.next %}
+      <div class="uc-track">
+        <div class="uc-track__row"><span><b style="font-weight: 500; color: #12201a">{{ ov.rank_name }}</b> → {{ ov.rank_progress.next|lower }}</span><span class="uc-num">{{ ov.rank_progress.have }} из 3 условий</span></div>
+        <div class="uc-track__bar"><i style="width: {{ (ov.rank_progress.have * 100 // 3) or 4 }}%"></i></div>
+        <div class="uc-track__row"><span>Уроки этапа {{ ov.rank_progress.stage.n }} · смотр этапа · исполненный приказ этапа</span></div>
+      </div>
+      {% endif %}
+
+      {% set rec = ov.rec %}
+      {% if rec.kind == 'lesson' %}
+      <a class="uc-next" href="/learn/lesson/{{ rec.lesson.id }}"><span class="uc-node" style="background: #12201a; color: #e9cf97; box-shadow: none">{{ ic('play') }}</span><span style="flex: 1"><b>Дальше: {{ rec.lesson.title|q }}</b><span>Этап {{ rec.lesson.stage }}, урок {{ rec.lesson.no }} · {{ (rec.lesson.minutes or 5)|plural('минута', 'минуты', 'минут') }}</span></span>{{ ic('arrow') }}</a>
+      {% elif rec.kind == 'test' %}
+      <a class="uc-next" href="/learn/test/{{ rec.stage.n }}"><span class="uc-node" style="border-radius: 14px; background: #12201a; color: #e9cf97; box-shadow: none">{{ ic('shield') }}</span><span style="flex: 1"><b>Дальше: смотр этапа «{{ rec.stage.name }}»</b><span>10 упражнений · порог 80 %</span></span>{{ ic('arrow') }}</a>
+      {% endif %}
+    </div>
+  </main>
+
+  <footer class="uc-act"><div class="uc-act__in" style="max-width: 680px">
+    <a class="btn btn--secondary" href="/learn" style="height: 52px">В «Учение»</a>
+    {% if rec.kind == 'lesson' %}<a class="btn btn--primary" href="/learn/lesson/{{ rec.lesson.id }}" style="margin-left: 0">Следующий урок</a>
+    {% elif rec.kind == 'test' %}<a class="btn btn--primary" href="/learn/test/{{ rec.stage.n }}" style="margin-left: 0">К смотру</a>
+    {% elif kind == 'test' and not mark.passed %}<a class="btn btn--primary" href="/learn/test/{{ stage.n }}" style="margin-left: 0">Пересдать</a>{% endif %}
+  </div></footer>
+</div>
+{% endblock %}

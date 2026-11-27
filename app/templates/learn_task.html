@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic %}
+{% block title %}Задание этапа «{{ stage.name }}» — Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<div class="uc-player">
+  <header class="uc-player__bar">
+    <a class="uc-close" href="/learn#path" aria-label="Вернуться в «Учение»">{{ ic('close') }}</a>
+    <div style="flex: 1"></div>
+  </header>
+  <main class="uc-player__main">
+  <form class="uc-player__body" method="post" action="/learn/task/{{ stage.n }}" style="padding-bottom: 140px">
+    <p class="uc-kicker"><b>Задание этапа {{ stage.n }}</b>· {{ stage.name }} · на неделю</p>
+    <h1 class="uc-q">{{ stage.task.title }}</h1>
+    <div class="uc-idea">
+      <p>{{ stage.task.text }}</p>
+      <span class="uc-src">{{ ic('book') }}В. В. Летуновский, {{ stage.task.source }}</span>
+    </div>
+    {% if done %}
+    <p class="uc-flash" role="status">Задание выполнено {{ done.created_at.date()|ru_date }}.</p>
+    {% if done.note %}<div class="uc-mentor" style="grid-template-columns: 1fr"><p style="white-space: pre-line">{{ done.note }}</p></div>{% endif %}
+    {% else %}
+    <div class="uc-write">
+      <label class="uc-label" for="note">Что сделали · по желанию, видите только вы</label>
+      <textarea id="note" name="note" rows="6" placeholder="Например, три правила, которые приняла команда"></textarea>
+    </div>
+    <p class="uc-sub" style="margin: 0">Удобнее разобрать задание с наставником? Начните новый разбор — он поможет написать сценарий.</p>
+    {% endif %}
+    <footer class="uc-act" style="position: fixed; left: 0; right: 0; bottom: 0"><div class="uc-act__in">
+      <a class="btn btn--secondary" href="/app" style="height: 52px">Разобрать с наставником</a>
+      {% if not done %}<button class="btn btn--primary" type="submit" style="margin-left: 0">Задание выполнено</button>{% else %}<a class="btn btn--primary" href="/learn#path" style="margin-left: 0">В «Учение»</a>{% endif %}
+    </div></footer>
+  </form>
+  </main>
+</div>
+{% endblock %}

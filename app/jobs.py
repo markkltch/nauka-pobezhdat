@@ -104,6 +104,9 @@ def send_morning_reports(db) -> int:
             lines.append("Пора подвести итог (разбор после дела):")
             lines += [f"— {s.title} {base}/app/{s.id}#aar" for s in to_review[:5]]
             lines.append("")
+        learn_line = _learn_line(db, user, base)
+        if learn_line:
+            lines += [learn_line, ""]
         lines.append(f"Отключить донесение: {base}/settings#notify")
         subject = f"Донесение: {len(overdue)} просрочено, {len(due_today)} на сегодня" if (overdue or due_today) \
             else "Донесение: пора подвести итог"
@@ -114,6 +117,25 @@ def send_morning_reports(db) -> int:
             log.exception("morning report failed for user %s", user.id)
     db.commit()
     return sent
+
+
+def _learn_line(db, user: User, base: str) -> str:
+    """«Урок дня» in the morning report, for people who keep it on in «Учение»."""
+    from . import learn
+
+    st = learn.state(db, user, create=False)
+    if not st or not st.in_report:
+        return ""
+    ov_done = learn.done_ids(db, user)
+    tests = learn.marks(db, user, "test")
+    rec = learn.recommend(db, user, ov_done, tests, learn.signals(db, user), learn.orders(db, user))
+    if rec["kind"] == "lesson":
+        return f"Учение: урок дня «{rec['lesson']['title']}», {rec['lesson'].get('minutes') or 5} минут — {base}/learn/lesson/{rec['lesson']['id']}"
+    if rec["kind"] == "review":
+        return f"Учение: повторение на 2 минуты — {base}/learn/review"
+    if rec["kind"] == "report":
+        return f"Учение: срок приказа «{rec['order'].title}» — отметьте, как прошло: {base}/learn/order/{rec['order'].id}"
+    return ""
 
 
 def _loop() -> None:

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ current.title if current else "Новая ситуация" }} — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
 {% block body %}
 <a class="skip-link" href="#talk">К разговору</a>
 <div class="shell">
@@ -163,11 +164,18 @@
         {% else %}
         <div class="msg msg--bot">
           <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
-          <div class="bot">{% for para in m.text.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}</div>
+          <div class="bot">{% for para in m.text.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
+            {% if m.data and m.data.learn_order %}<p class="uc-toast" role="status" id="learn-done"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5l1.7 3.6 3.8.5-2.8 2.7.7 3.8L8 11.3 4.6 13.1l.7-3.8L2.5 6.6l3.8-.5z"/></svg><span>Отчёт по приказу из урока «{{ m.data.lesson }}» принят. Итог записан в «Люди и уроки». <a class="link-u" href="/learn" style="color: #e9cf97">В «Учение»</a></span></p>{% endif %}</div>
         </div>
         {% endif %}
       {% endfor %}
 
+      {% if learn_report %}
+      <div class="msg msg--bot">
+        <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
+        <div class="bot">{% with o=learn_report, back="/app/" ~ current.id %}{% include "_uc_report.html" %}{% endwith %}</div>
+      </div>
+      {% endif %}
       {% if plan_ and current.review != 'done' %}
       <details class="aar {% if review_due %}is-due{% endif %}" id="aar" {% if review_due %}open{% endif %}>
         <summary>{% if review_due %}Пора подвести итог: разбор после дела{% else %}Подвести итог раньше срока{% endif %}</summary>

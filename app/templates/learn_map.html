@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic %}
+{% block title %}Карта навыков — Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<div class="uc-player">
+  <header class="uc-player__bar">
+    <a class="uc-close" href="/learn" aria-label="Вернуться в «Учение»">{{ ic('close') }}</a>
+    <div style="flex: 1"></div>
+  </header>
+  <main class="uc-player__body" style="max-width: 1080px">
+    <div>
+      <p class="uc-kicker"><b>{% if st.diag_at %}Вступительный смотр пройден{% else %}Карта навыков{% endif %}</b>· по ситуациям смотра и вашим последним разборам</p>
+      <h1 class="uc-q" style="margin-top: 8px">Ваша карта навыков</h1>
+    </div>
+    <div class="uc-grid">
+      <div class="uc-card">
+        <h2 class="uc-h2">Девять навыков «Стратегии победного потока»</h2>
+        <div style="overflow-x: auto" tabindex="0" role="region" aria-label="Таблица">
+        <table class="uc-team">
+          <thead><tr><th scope="col">Навык</th><th scope="col">Сейчас</th><th scope="col">На чём основано</th></tr></thead>
+          <tbody>
+          {% for r in rows %}
+            <tr><td {% if r.kind == 'grow' %}style="font-weight: 500"{% endif %}>{{ r.stage.n }}. {{ r.stage.name }}</td>
+              <td>{% if r.kind == 'grow' %}<span class="uc-tag uc-tag--red">Зона роста</span>{% elif r.kind == 'strong' %}<span class="uc-tag uc-tag--sage">Сильная сторона</span>{% else %}<span class="uc-tag">Ровно</span>{% endif %}</td>
+              <td style="color: {% if r.kind == 'grow' %}#7e0f24{% else %}#46463e{% endif %}">{{ r.basis }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <p class="uc-sub" style="margin: 0">Карта обновляется сама: после каждого урока, смотра и исполненного приказа.</p>
+      </div>
+
+      <div class="uc-col">
+        <div class="uc-hero" style="padding: 24px">
+          <p class="uc-label">Ваш путь</p>
+          {% set grow = rows|selectattr('kind', 'equalto', 'grow')|list %}
+          <h2 style="font-size: 24px">{% if grow %}Начнём с навыка «{{ grow[0].stage.name|lower }}»{% else %}Пойдём по порядку потока{% endif %}</h2>
+          <p style="font-size: 15px">Этапы идут по порядку, но уроки зон роста встанут первыми в рекомендациях.{% if ov.rec.lesson %} Первый — {{ ov.rec.lesson.title|q }}.{% endif %}</p>
+          <a class="uc-btn-gold" href="{% if ov.rec.lesson %}/learn/lesson/{{ ov.rec.lesson.id }}{% else %}/learn{% endif %}" style="width: 100%">Начать путь</a>
+        </div>
+
+        <form class="uc-card" method="post" action="/learn/settings" aria-labelledby="goal-h">
+          <input type="hidden" name="next" value="/learn/map?saved=1">
+          <h2 class="uc-h2" id="goal-h" style="font-size: 17px">Цель дня</h2>
+          <div class="uc-tabs" role="radiogroup" aria-label="Минут в день" style="width: 100%; box-sizing: border-box">
+            {% for m in (2, 5, 10) %}<label><input type="radio" name="goal_min" value="{{ m }}" {% if (st.goal_min or 5) == m %}checked{% endif %}>{{ m }} мин</label>{% endfor %}
+          </div>
+          <p class="uc-sub" style="margin: 0">5 минут — один урок или повторение в день. Этап займёт неделю.</p>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 15px; min-height: 44px"><input type="checkbox" name="in_report" value="1" {% if st.in_report %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #12201a">Урок дня в утреннем донесении</label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 15px; min-height: 44px"><input type="checkbox" name="workdays" value="1" {% if st.workdays %}checked{% endif %} style="width: 20px; height: 20px; accent-color: #12201a">Ряд только по рабочим дням</label>
+          <button class="btn btn--secondary" type="submit">Сохранить</button>
+          {% if request.query_params.get('saved') %}<p class="uc-flash" role="status">Сохранено.</p>{% endif %}
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

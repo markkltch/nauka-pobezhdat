@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic %}
+{% block title %}Приказ {{ o.title|q }} — Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<div class="uc-player">
+  <header class="uc-player__bar">
+    <a class="uc-close" href="/learn" aria-label="Вернуться в «Учение»">{{ ic('close') }}</a>
+    <div style="flex: 1"></div>
+  </header>
+  <main class="uc-player__body">
+    <p class="uc-kicker"><b>Приказ на неделю</b>· до {{ o.due|ru_date }}</p>
+    <h1 class="uc-q">{{ o.title }}</h1>
+    {% if o.outcome %}
+    <div class="uc-order">
+      <dl class="uc-ift">
+        <div><dt>Если</dt><dd>{{ o.if_text }}</dd></div>
+        <div><dt>то</dt><dd>{{ o.then_text }}</dd></div>
+      </dl>
+      <p class="uc-flash" role="status" style="margin: 0">Итог: {{ OUT[o.outcome]|lower }}{% if o.note %} — {{ o.note }}{% endif %}.</p>
+    </div>
+    <a class="btn btn--secondary" href="/learn" style="justify-self: start">В «Учение»</a>
+    {% else %}
+    {% with back="/learn" %}{% include "_uc_report.html" %}{% endwith %}
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

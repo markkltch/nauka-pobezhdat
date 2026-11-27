@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Штаб «{{ shtab.name }}» — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
 {% block body %}
 <a class="skip-link" href="#board">К задачам</a>
 <header class="shtab-head">
@@ -12,6 +13,7 @@
       </div>
       <a class="btn btn--primary" href="/app">Новая ситуация</a>
     </div>
+    <nav class="uc-tabs" aria-label="Разделы штаба" style="margin-top: 16px"><a href="/shtab/{{ shtab.id }}" aria-current="page">Задачи</a><a href="/shtab/{{ shtab.id }}/learn">Учение</a></nav>
   </div>
 </header>
 

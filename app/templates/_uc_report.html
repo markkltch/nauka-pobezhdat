@@ -1,0 +1,24 @@
+{# «Как прошло?» — the report on an order from «Учение»; o = LearnOrder, back = where to return #}
+{% from "_uc.html" import ic %}
+<form class="uc-report" method="post" action="/learn/order/{{ o.id }}/report" id="learn-report" aria-labelledby="rp-h{{ o.id }}">
+  <input type="hidden" name="next" value="{{ back }}">
+  <div class="uc-order__top"><span class="uc-order__seal">{{ ic('order') }}</span><span><b id="rp-h{{ o.id }}" style="display: block; font-weight: 500; font-size: 17px">{% if o.due < L.today() %}Срок приказа прошёл. Как прошло?{% elif o.due == L.today() %}Срок приказа сегодня. Как прошло?{% else %}Как идёт приказ?{% endif %}</b><span class="uc-sub" style="margin: 0; font-size: 13px">Урок {{ L.lesson(o.lesson_id).title|q }} · поставлен {{ o.created_at.date()|ru_date }}</span></span></div>
+  <dl class="uc-ift" style="font-size: 15px">
+    <div><dt>Если</dt><dd>{{ o.if_text }}</dd></div>
+    <div><dt>то</dt><dd>{{ o.then_text }}</dd></div>
+  </dl>
+  <fieldset style="border: 0; margin: 0; padding: 0">
+    <legend class="sr-only">Как прошло</legend>
+    <div class="uc-choice">
+      <label class="uc-choice__opt"><input type="radio" name="outcome" value="done" required>{{ ic('check') }}<span>Сделал</span></label>
+      <label class="uc-choice__opt"><input type="radio" name="outcome" value="partial">{{ ic('minus') }}<span>Частично</span></label>
+      <label class="uc-choice__opt"><input type="radio" name="outcome" value="miss">{{ ic('close') }}<span>Не вышло</span></label>
+    </div>
+  </fieldset>
+  <label class="sr-only" for="rp-note{{ o.id }}">Одна фраза о том, что получилось</label>
+  <input id="rp-note{{ o.id }}" name="note" type="text" maxlength="500" placeholder="Одна фраза: что получилось или что помешало" autocomplete="off" class="uc-report__note">
+  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+    <span class="uc-sub" style="margin: 0; flex: 1; min-width: 200px">Итог попадёт в «Люди и уроки». Исполненный приказ — +50 опыта.</span>
+    <button class="btn btn--primary" type="submit">Отчитаться</button>
+  </div>
+</form>

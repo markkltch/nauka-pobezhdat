@@ -257,3 +257,118 @@ class Usage(Base):
     tokens_out: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     cost_rub: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now, index=True)
+
+
+# ---------- Учение: the learning section ----------
+
+class LearnState(Base):
+    """One per person who opened «Учение»: experience, the daily goal, the entrance review."""
+
+    __tablename__ = "learn_state"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    xp: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    goal_min: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    workdays: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    in_report: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    diag: Mapped[dict | None] = mapped_column(JSON)  # {"1": 0..2, ...} per stage
+    diag_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnDay(Base):
+    """A day with learning in it (lesson, review, test, report): the streak is counted from these."""
+
+    __tablename__ = "learn_days"
+    __table_args__ = (UniqueConstraint("user_id", "day"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    day: Mapped[dt.date] = mapped_column(Date)
+    seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class LearnDone(Base):
+    """A finished lesson (it can be repeated: the latest row counts)."""
+
+    __tablename__ = "learn_done"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    lesson_id: Mapped[str] = mapped_column(String(8), index=True)
+    right: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    seconds: Mapped[int] = mapped_column(Integer, default=0)
+    xp: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnItem(Base):
+    """Spaced repetition of one exercise for one person: box 0..5 on the 1-3-7-21-60 ladder."""
+
+    __tablename__ = "learn_items"
+    __table_args__ = (UniqueConstraint("user_id", "item_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    item_id: Mapped[str] = mapped_column(String(16))
+    box: Mapped[int] = mapped_column(Integer, default=0)
+    due: Mapped[dt.date] = mapped_column(Date)
+    right: Mapped[int] = mapped_column(Integer, default=0)
+    wrong: Mapped[int] = mapped_column(Integer, default=0)
+    last_pick: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnOrder(Base):
+    """«Приказ на неделю»: a lesson applied to a real plan, as an if-then step with a due date."""
+
+    __tablename__ = "learn_orders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    lesson_id: Mapped[str] = mapped_column(String(8))
+    step_id: Mapped[int | None] = mapped_column(ForeignKey("steps.id"))
+    title: Mapped[str] = mapped_column(String(200))
+    if_text: Mapped[str] = mapped_column(Text, default="")
+    then_text: Mapped[str] = mapped_column(Text, default="")
+    due: Mapped[dt.date] = mapped_column(Date)
+    outcome: Mapped[str] = mapped_column(String(8), default="", server_default="")  # "" | done | partial | miss
+    note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    reported_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnMark(Base):
+    """A stage's review (смотр: score of total) or its big task (задание этапа)."""
+
+    __tablename__ = "learn_marks"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(8))  # test | task
+    stage: Mapped[int] = mapped_column(Integer)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    passed: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnAssign(Base):
+    """A shtab head gives the team a stage, with a deadline."""
+
+    __tablename__ = "learn_assign"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    shtab_id: Mapped[int] = mapped_column(ForeignKey("shtabs.id"), index=True)
+    stage: Mapped[int] = mapped_column(Integer)
+    due: Mapped[dt.date | None] = mapped_column(Date)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+
+
+class LearnNote(Base):
+    """Praise or a nudge from the shtab head, shown once in the member's «Учение»."""
+
+    __tablename__ = "learn_notes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    from_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    to_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    text: Mapped[str] = mapped_column(String(300))
+    seen: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+    sender: Mapped[User] = relationship(foreign_keys=[from_id])

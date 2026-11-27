@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic, bar, week %}
+{% block title %}Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<a class="skip-link" href="#learn">К учению</a>
+<div class="shell">
+  {% include "_side.html" %}
+  <main class="talk" id="learn">
+    <header class="talk__head uc-head">
+      <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
+      <div class="talk__title"><h1>Учение</h1><p>{{ course.title|q }} · 9 этапов по «Науке побеждать» и книгам В. В. Летуновского</p></div>
+      {% if ov.due %}<a class="btn btn--secondary" href="/learn/review">Повторить · {{ ov.due }}</a>{% endif %}
+    </header>
+
+    <div class="uc-page">
+      {% for n in notes %}
+      <div class="uc-note" role="status">{{ ic('star') }}<p><b>{{ n.sender.display_name }}:</b> {{ n.text }}</p></div>
+      {% endfor %}
+      {% set q = request.query_params %}
+      {% if q.get('reviewed') %}{% set rv = q.get('reviewed').split('-') %}<p class="uc-flash" role="status">Повторение пройдено: верно {{ rv[0] }} из {{ rv[1] }}. +5 опыта.</p>{% endif %}
+      {% if q.get('task') %}<p class="uc-flash" role="status">Задание этапа отмечено. +100 опыта.</p>{% endif %}
+      {% if q.get('learned') %}<p class="uc-flash" role="status">Отчёт по приказу принят{% if q.get('learned') != '0' %}, +{{ q.get('learned') }} опыта{% endif %}.</p>{% endif %}
+      {% if q.get('review') == 'none' %}<p class="uc-flash" role="status">Повторять пока нечего: упражнения вернутся по графику.</p>{% endif %}
+
+      {% if not ov.state.diag_at %}
+      <section class="uc-card" aria-labelledby="diag-h" style="grid-template-columns: 1fr auto; align-items: center">
+        <div><h2 class="uc-h2" id="diag-h">Начните со вступительного смотра</h2><p class="uc-sub">9 ситуаций, 4 минуты. По ответам и вашим разборам мы соберём карту навыков и подберём путь.</p></div>
+        <a class="btn btn--primary" href="/learn/start">Пройти смотр</a>
+      </section>
+      {% endif %}
+
+      <section class="uc-stats" aria-label="Ваш прогресс">
+        <div class="uc-stat"><span class="uc-stat__ic uc-stat__ic--ink">{{ ic('rank') }}</span><span><b>{{ ov.rank_name }}</b><span>{% if ov.rank_progress.next %}до чина: {{ ov.rank_progress.have }} из 3 условий{% else %}высший чин{% endif %}</span></span></div>
+        <div class="uc-stat"><span class="uc-stat__ic uc-stat__ic--fire">{{ ic('fire') }}</span><span><b class="uc-num">{{ ov.streak.days|plural('день', 'дня', 'дней') }}</b><span>боевой ряд · привалов {{ ov.streak.rests_left }}</span></span></div>
+        <div class="uc-stat"><span class="uc-stat__ic">{{ ic('star') }}</span><span><b class="uc-num">{{ '{:,}'.format(ov.state.xp or 0).replace(',', ' ') }}</b><span>опыта · +{{ ov.xp_week }} за неделю</span></span></div>
+        {% set goal = ov.state.goal_min or 5 %}{% set pct = [100, (ov.minutes * 100 // goal)]|min %}
+        <div class="uc-stat"><span class="uc-ring" style="--p: {{ pct }}"><span>{{ [ov.minutes, goal]|min }}/{{ goal }}</span></span><span><b>Цель дня</b><span>{% if ov.minutes >= goal %}выполнена{% else %}ещё {{ goal - ov.minutes }} мин{% endif %}</span></span></div>
+      </section>
+
+      <div class="uc-grid">
+        <div class="uc-col">
+          {% set rec = ov.rec %}
+          <section class="uc-hero" aria-labelledby="next-h">
+            {% if rec.kind == 'lesson' %}{% set les = rec.lesson %}{% set st = L.stage(les.stage) %}
+            <p class="uc-label">Этап {{ st.n }} · {{ st.name }} · урок {{ les.no }} из 3</p>
+            <h2 id="next-h">{{ les.title }}</h2>
+            {% if les.idea %}<p>{{ les.idea.title }}.</p>{% endif %}
+            {% if rec.why %}<div class="uc-hero__why">{{ ic('target') }}<span>{{ rec.why }}</span></div>{% endif %}
+            <div class="uc-hero__row">
+              <a class="uc-btn-gold" href="/learn/lesson/{{ les.id }}">{% if les.id in ov.done %}Повторить урок{% else %}Начать урок{% endif %}{{ ic('arrow') }}</a>
+              <div class="uc-hero__meta"><span>{{ ic('clock') }}{{ (les.minutes or 5)|plural('минута', 'минуты', 'минут') }}</span><span>{{ ic('order') }}приказ на неделю</span></div>
+            </div>
+            {% elif rec.kind == 'report' %}
+            <p class="uc-label">Приказ на неделю · срок {{ rec.order.due|ru_date }}</p>
+            <h2 id="next-h">{{ rec.order.title }}</h2>
+            <p>{{ rec.why }}</p>
+            <div class="uc-hero__row"><a class="uc-btn-gold" href="/learn/order/{{ rec.order.id }}">Отчитаться{{ ic('arrow') }}</a></div>
+            {% elif rec.kind == 'review' %}
+            <p class="uc-label">Повторение</p>
+            <h2 id="next-h">Вернитесь к пройденному</h2>
+            <p>{{ rec.why }} Две минуты: так правила остаются в памяти, а не в тетради.</p>
+            <div class="uc-hero__row"><a class="uc-btn-gold" href="/learn/review">Повторить{{ ic('arrow') }}</a></div>
+            {% elif rec.kind == 'test' %}
+            <p class="uc-label">Смотр этапа {{ rec.stage.n }}</p>
+            <h2 id="next-h">Смотр этапа «{{ rec.stage.name }}»</h2>
+            <p>{{ rec.why }} Десять упражнений, порог 80 %.</p>
+            <div class="uc-hero__row"><a class="uc-btn-gold" href="/learn/test/{{ rec.stage.n }}">Сдать смотр{{ ic('arrow') }}</a></div>
+            {% elif rec.kind == 'locked' %}
+            <p class="uc-label">Этап {{ rec.lesson.stage }}</p>
+            <h2 id="next-h">{{ rec.lesson.title }}</h2>
+            <p>Первые два этапа бесплатны. Дальше — на полном доступе, вместе с разборами без ограничений.</p>
+            <div class="uc-hero__row"><a class="uc-btn-gold" href="/billing">Полный доступ{{ ic('arrow') }}</a></div>
+            {% else %}
+            <p class="uc-label">Путь</p>
+            <h2 id="next-h">Следующие этапы готовятся</h2>
+            <p>{{ rec.why }}</p>
+            {% endif %}
+          </section>
+
+          <section class="uc-path" aria-labelledby="path-h" id="path">
+            <div class="uc-card__head"><h2 class="uc-h2" id="path-h">Путь</h2><span class="uc-sub" style="margin: 0">Этап в неделю: три урока, смотр, задание</span></div>
+            {% set later = ov.stages|rejectattr('stage.ready')|list %}
+            {% for s in ov.stages if s.stage.ready %}{% set st = s.stage %}
+            {% set expand = st.ready and s.open and s.reached and s.status != 'done' %}
+            <div class="uc-stage {% if not expand and s.status != 'done' %}uc-stage--locked{% endif %}">
+              <div class="uc-stage__head">
+                <span class="uc-stage__no {% if s.status == 'done' %}uc-stage__no--done{% elif s.status == 'now' %}uc-stage__no--now{% endif %}">{{ st.n }}</span>
+                <span><b>{{ st.name }}</b><small>{{ st.lesson_list|map(attribute='title')|join(' · ') }}</small></span>
+                {% if s.status == 'done' %}<span class="uc-tag uc-tag--ink">Пройден · смотр {{ s.test.score }} из {{ s.test.total }}</span>
+                {% elif not st.ready %}<span class="uc-tag">Готовится</span>
+                {% elif not s.open %}<a class="uc-tag" href="/billing">{{ ic('lock') }}Полный доступ</a>
+                {% elif not s.reached %}<a class="uc-tag" href="/learn/test/{{ st.n }}">Сдать смотр сразу</a>
+                {% elif s.status == 'now' %}<span class="chip chip--late">Сейчас</span>{% endif %}
+              </div>
+              {% if s.status == 'done' and not s.task %}
+              <ol class="uc-steps">
+                <li class="uc-step"><span class="uc-node">{{ ic('flag') }}</span><a class="uc-step__t" href="/learn/task/{{ st.n }}"><b>Задание этапа: {{ st.task.title }}</b><span>Большое задание по главе книги · +100 опыта</span></a></li>
+              </ol>
+              {% endif %}
+              {% if expand %}
+              <ol class="uc-steps">
+                {% for x in s.steps %}{% set les = x.lesson %}
+                <li class="uc-step {% if x.done %}uc-step--done{% elif x.now %}uc-step--now{% endif %}">
+                  <span class="uc-node">{% if x.done %}{{ ic('check') }}{% elif x.open %}{{ ic('play') }}{% else %}{{ ic('lock') }}{% endif %}</span>
+                  {% if x.open %}<a class="uc-step__t" href="/learn/lesson/{{ les.id }}"><b>{{ les.title }}</b><span>Урок {{ les.no }} · {{ les.minutes or 5 }} мин{% if x.done %} · пройден{% elif x.now and ov.rec.why %} · подобран по вашим разборам{% endif %}</span></a>
+                  {% else %}<span class="uc-step__t"><b>{{ les.title }}</b><span>Урок {{ les.no }} · откроется после предыдущего</span></span>{% endif %}
+                  {% if x.now %}<a class="btn btn--primary uc-step__go" href="/learn/lesson/{{ les.id }}">Начать</a>{% endif %}
+                </li>
+                {% endfor %}
+                <li class="uc-step uc-step--test {% if s.test and s.test.passed %}uc-step--done{% endif %}">
+                  <span class="uc-node">{% if s.test and s.test.passed %}{{ ic('check') }}{% else %}{{ ic('shield') }}{% endif %}</span>
+                  <a class="uc-step__t" href="/learn/test/{{ st.n }}"><b>Смотр этапа</b><span>{% if s.test %}Лучший результат {{ s.test.score }} из {{ s.test.total }}{% if not s.test.passed %} · нужно 80 %{% endif %}{% else %}10 упражнений, 3 из прошлых этапов · порог 80 %{% endif %}</span></a>
+                </li>
+                <li class="uc-step {% if s.task %}uc-step--done{% endif %}">
+                  <span class="uc-node">{% if s.task %}{{ ic('check') }}{% else %}{{ ic('flag') }}{% endif %}</span>
+                  <a class="uc-step__t" href="/learn/task/{{ st.n }}"><b>Задание этапа: {{ st.task.title }}</b><span>{% if s.task %}Выполнено{% else %}Большое задание по главе книги · +100 опыта{% endif %}</span></a>
+                </li>
+              </ol>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% if later %}
+            <div class="uc-stage uc-stage--locked">
+              <div class="uc-stage__head">
+                <span class="uc-stage__no" style="width: auto; padding: 0 10px">{{ later[0].stage.n }}–{{ later[-1].stage.n }}</span>
+                <span><b>{{ later|map(attribute='stage.name')|join(', ') }}</b><small>Ещё {{ (later|length * 3)|plural('урок', 'урока', 'уроков') }} и {{ later|length|plural('смотр', 'смотра', 'смотров') }} · открываются по мере готовности</small></span>
+                <span class="uc-tag">Готовятся</span>
+              </div>
+            </div>
+            {% endif %}
+          </section>
+        </div>
+
+        <aside class="uc-col" aria-label="Приказы и навыки">
+          {% if ov.open_orders %}
+          {% for o in ov.open_orders[:2] %}
+          <section class="uc-order" aria-labelledby="ord-h{{ o.id }}">
+            <div class="uc-order__top"><span class="uc-order__seal">{{ ic('order') }}</span><span><b id="ord-h{{ o.id }}" style="display: block; font-weight: 500">Приказ на неделю</b><span class="uc-sub" style="margin: 0; font-size: 13px">из урока {{ L.lesson(o.lesson_id).title|q }}</span></span></div>
+            <dl class="uc-ift">
+              <div><dt>Если</dt><dd>{{ o.if_text }}</dd></div>
+              <div><dt>то</dt><dd>{{ o.then_text }}</dd></div>
+              <div><dt>до</dt><dd>{{ o.due|ru_date }}</dd></div>
+            </dl>
+            <div class="uc-order__foot"><span>{% if o.step_id %}Шаг в плане{% else %}Отдельная задача{% endif %}</span><a class="btn {% if o.due <= L.today() %}btn--primary{% else %}btn--secondary{% endif %}" href="/learn/order/{{ o.id }}">Отчитаться</a></div>
+          </section>
+          {% endfor %}
+          {% else %}
+          <section class="uc-card" aria-labelledby="ord-none">
+            <h2 class="uc-h2" id="ord-none" style="font-size: 17px">Приказов пока нет</h2>
+            <p class="uc-sub" style="margin: 0">Каждый урок заканчивается приказом на неделю — правило в вашем настоящем деле.</p>
+          </section>
+          {% endif %}
+
+          <section class="uc-card" aria-labelledby="sk-h">
+            <div class="uc-card__head"><h2 class="uc-h2" id="sk-h">Карта навыков</h2>{% if ov.state.diag_at %}<a href="/learn/map">Подробнее</a>{% endif %}</div>
+            <ul class="uc-skills">
+              {% for s in ov.stages %}{% set n = s.stage.n %}{% set lv = ov.levels[n] %}
+              <li class="uc-skill"><b>{{ s.stage.name }}</b><span class="uc-skill__lvl">{{ L.LEVEL_NAMES[lv] }}</span>{{ bar(lv) }}
+                {% if ov.signals.get(n) %}<span class="uc-skill__sig">{{ ic('alert') }}{{ ov.signals[n] }}</span>{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </section>
+
+          <section class="uc-card" aria-labelledby="wk-h">
+            <div class="uc-card__head"><h2 class="uc-h2" id="wk-h">Эта неделя</h2><span class="uc-sub" style="margin: 0">{% if ov.state.workdays %}по рабочим дням{% else %}все дни{% endif %}</span></div>
+            {{ week(ov.streak) }}
+            <p class="uc-sub" style="margin: 0">{% if ov.streak.today %}Сегодня ряд продлён.{% else %}Сегодня ряд продлит урок, повторение или закрытый шаг плана.{% endif %}</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

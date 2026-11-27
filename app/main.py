@@ -15,10 +15,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, files, jobs, legal, llm, mentor, speech, tbank, yandex_id
+from . import access, auth, billing, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
-from .models import LEVELS, Lesson, Member, Person, Plan, Shtab, Situation, Step, Usage, User, now
+from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, Person, Plan,
+                     Shtab, Situation, Step, Usage, User, now)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 HERE = Path(__file__).resolve().parent
@@ -59,6 +60,7 @@ def _plural(n: int, one: str, few: str, many: str) -> str:
 templates.env.filters["ru_date"] = _ru_date
 templates.env.filters["plural"] = _plural
 templates.env.filters["initials"] = lambda name: "".join(w[0] for w in (name or "?").split()[:2]).upper() or "?"
+templates.env.filters["q"] = lambda t: t if str(t).startswith("«") else f"«{t}»"
 templates.env.filters["rub"] = lambda n: f"{int(n):,}".replace(",", "\u00a0") + "\u00a0₽"
 
 
@@ -437,7 +439,8 @@ def lesson_delete(lid: int, user: User = Depends(auth.require_user), db: Session
 def _sidebar(db: Session, user: User) -> dict:
     situations = db.scalars(select(Situation).where(Situation.user_id == user.id).order_by(Situation.updated_at.desc())).all()
     shtabs = my_shtabs(db, user)
-    return {"situations": situations, "shtabs": shtabs, "plan": access.summary(db, user)}
+    return {"situations": situations, "shtabs": shtabs, "plan": access.summary(db, user),
+            "learn_count": learn.done_count(db, user), "learn_total": learn.course()["total"]}
 
 
 def my_shtabs(db: Session, user: User) -> list[Shtab]:
@@ -510,7 +513,8 @@ def app_situation(request: Request, sid: int, err: int = 0, user: User = Depends
     if r := _gate(db, user):
         return r
     sit = _own_situation(db, user, sid)
-    return page(request, "app.html", user=user, current=sit, err=err, **_sidebar(db, user),
+    learn_report = _learn_report(db, user, sit)
+    return page(request, "app.html", user=user, current=sit, err=err, **_sidebar(db, user), learn_report=learn_report, L=learn,
                 limit=False, room=sit.stage != "follow" or mentor.can_talk(db, user, sit),
                 review_due=mentor.review_due(sit), can_prep=mentor.can_prep(db, user, sit),
                 ferr=request.query_params.get("ferr", ""))
@@ -878,3 +882,370 @@ def admin(request: Request, user: User = Depends(auth.require_admin), db: Sessio
         "shtabs": db.scalar(select(func.count(Shtab.id))),
     }
     return page(request, "admin.html", user=user, stats=stats, rows=rows)
+
+
+# ---------- Учение ----------
+
+def _learn_report(db: Session, user: User, sit: Situation) -> LearnOrder | None:
+    """An order from «Учение» whose step sits in this plan and whose due date has come."""
+    plan_ = sit.plan
+    if not plan_:
+        return None
+    ids = [s.id for s in plan_.steps]
+    if not ids:
+        return None
+    return db.scalars(select(LearnOrder).where(LearnOrder.user_id == user.id, LearnOrder.step_id.in_(ids),
+                                               LearnOrder.outcome == "", LearnOrder.due <= learn.today())
+                      .order_by(LearnOrder.due)).first()
+
+
+def _lesson_or_404(lid: str) -> dict:
+    les = learn.lesson(lid)
+    if not les or not les.get("ready"):
+        raise HTTPException(404)
+    return les
+
+
+@app.get("/learn", response_class=HTMLResponse)
+def learn_home(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    ov = learn.overview(db, user)
+    notes = db.scalars(select(LearnNote).where(LearnNote.to_id == user.id, LearnNote.seen.is_(False))
+                       .order_by(LearnNote.id.desc())).all()
+    for n in notes:
+        n.seen = True
+    db.commit()
+    return page(request, "learn.html", user=user, ov=ov, notes=notes, course=learn.course(), L=learn,
+                **_sidebar(db, user))
+
+
+@app.get("/learn/start", response_class=HTMLResponse)
+def learn_start(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    items = [{"id": f"d{i}", "type": "diag", "scene": q["scene"], "q": q["q"], "options": [o[0] for o in q["options"]]}
+             for i, q in enumerate(learn.course()["diag"])]
+    return page(request, "learn_player.html", user=user, mode="diag", title="Вступительный смотр",
+                payload={"mode": "diag", "items": items, "finish": "/learn/start", "close": "/learn"})
+
+
+@app.post("/learn/start")
+def learn_start_save(payload: dict, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    picks = {str(k).lstrip("d"): v for k, v in (payload.get("picks") or {}).items()}
+    learn.save_diag(db, user, picks)
+    db.commit()
+    return JSONResponse({"next": "/learn/map"})
+
+
+@app.get("/learn/map", response_class=HTMLResponse)
+def learn_map(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    st = learn.state(db, user)
+    rows = learn.diag_map(db, user)
+    ov = learn.overview(db, user)
+    db.commit()
+    return page(request, "learn_map.html", user=user, st=st, rows=rows, ov=ov)
+
+
+@app.post("/learn/settings")
+def learn_settings(goal_min: int = Form(5), workdays: str = Form(""), in_report: str = Form(""), next: str = Form("/learn"),
+                   user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    st = learn.state(db, user)
+    st.goal_min = goal_min if goal_min in (2, 5, 10) else 5
+    st.workdays = bool(workdays)
+    st.in_report = bool(in_report)
+    db.commit()
+    return see_other(safe_next(next))
+
+
+@app.get("/learn/lesson/{lid}", response_class=HTMLResponse)
+def learn_lesson(request: Request, lid: str, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    les = _lesson_or_404(lid)
+    ov = learn.overview(db, user)
+    rec_id = ov["rec"]["lesson"]["id"] if ov["rec"].get("lesson") else None
+    if not learn.lesson_open(db, user, les, ov["done"], ov["tests"], rec_id):
+        return see_other("/learn#path")
+    plans = learn.candidate_plans(db, user)
+    payload = {"mode": "lesson", "lesson": {k: les[k] for k in ("id", "title", "quote_text", "quote_source", "idea", "source", "example", "words")},
+               "items": [learn.public_item(it) for it in les["items"]], "finish": f"/learn/lesson/{lid}/finish",
+               "words_url": "/learn/words", "close": "/learn"}
+    st = learn.stage(les["stage"])
+    db.commit()
+    return page(request, "learn_player.html", user=user, mode="lesson", les=les, stage=st, plans=plans, L=learn,
+                title=les["title"], payload=payload, today=learn.today(), dt=dt,
+                due=learn.today() + dt.timedelta(days=les.get("order", {}).get("days", 5)))
+
+
+@app.post("/learn/lesson/{lid}/finish")
+def learn_lesson_finish(lid: str, payload: dict, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    les = _lesson_or_404(lid)
+    right, total = learn.schedule(db, user, payload.get("results") or {})
+    first = lid not in learn.done_ids(db, user)
+    xp = learn.XP["lesson"] if first else learn.XP["review"]
+    seconds = max(0, min(int(payload.get("seconds") or 0), 3600))
+    db.add(LearnDone(user_id=user.id, lesson_id=les["id"], right=right, total=total, seconds=seconds, xp=xp))
+    learn.add_xp(db, user, xp)
+    learn.touch(db, user, seconds)
+    db.commit()
+    return JSONResponse({"ok": True, "right": right, "total": total, "xp": xp})
+
+
+@app.post("/learn/words")
+def learn_words(payload: dict, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    les = _lesson_or_404(str(payload.get("lesson", "")))
+    fb = learn.words_feedback(db, user, les, str(payload.get("text", "")))
+    db.commit()
+    return JSONResponse(fb)
+
+
+@app.post("/learn/lesson/{lid}/order")
+def learn_order(lid: str, plan_id: int = Form(0), if_text: str = Form(""), then_text: str = Form(""), due: str = Form(""),
+                who: str = Form("Я"), skip: str = Form(""), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    les = _lesson_or_404(lid)
+    if not skip and if_text.strip() and then_text.strip():
+        try:
+            d = dt.date.fromisoformat(due) if due else learn.today() + dt.timedelta(days=5)
+        except ValueError:
+            d = learn.today() + dt.timedelta(days=5)
+        d = max(d, learn.today())
+        plan_ = None
+        if plan_id:
+            plan_ = db.get(Plan, plan_id)
+            if not plan_ or plan_.user_id != user.id:
+                raise HTTPException(404)
+        learn.make_order(db, user, les, plan_, if_text, then_text, d, who)
+        db.commit()
+    return see_other(f"/learn/lesson/{lid}/done")
+
+
+@app.get("/learn/lesson/{lid}/done", response_class=HTMLResponse)
+def learn_lesson_done(request: Request, lid: str, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    les = _lesson_or_404(lid)
+    last = db.scalars(select(LearnDone).where(LearnDone.user_id == user.id, LearnDone.lesson_id == lid)
+                      .order_by(LearnDone.id.desc())).first()
+    if not last:
+        return see_other(f"/learn/lesson/{lid}")
+    order = db.scalars(select(LearnOrder).where(LearnOrder.user_id == user.id, LearnOrder.lesson_id == lid)
+                       .order_by(LearnOrder.id.desc())).first()
+    if order and order.created_at < last.created_at:
+        order = None
+    ov = learn.overview(db, user)
+    db.commit()
+    return page(request, "learn_done.html", user=user, kind="lesson", les=les, last=last, order=order, ov=ov, L=learn,
+                plan_title=(learn.order_situation(db, order).plan.title if order and learn.order_situation(db, order) else ""))
+
+
+@app.get("/learn/review", response_class=HTMLResponse)
+def learn_review(request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    items = learn.review_items(db, user)
+    if not items:
+        return see_other("/learn?review=none")
+    return page(request, "learn_player.html", user=user, mode="review", title="Повторение",
+                payload={"mode": "review", "items": [learn.public_item(it) for it in items],
+                         "finish": "/learn/review/finish", "close": "/learn"})
+
+
+@app.post("/learn/review/finish")
+def learn_review_finish(payload: dict, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    right, total = learn.schedule(db, user, payload.get("results") or {})
+    if total:
+        learn.add_xp(db, user, learn.XP["review"])
+        learn.touch(db, user, max(0, min(int(payload.get("seconds") or 0), 3600)))
+    db.commit()
+    return JSONResponse({"next": f"/learn?reviewed={right}-{total}"})
+
+
+@app.get("/learn/test/{n}", response_class=HTMLResponse)
+def learn_test(request: Request, n: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    if not 1 <= n <= len(learn.course()["stages"]) or not learn.stage(n)["ready"] or not learn.stage_open(db, user, n):
+        return see_other("/learn#path")
+    items = learn.test_items(db, user, n)
+    return page(request, "learn_player.html", user=user, mode="test", title=f"Смотр этапа «{learn.stage(n)['name']}»",
+                payload={"mode": "test", "items": [learn.public_item(it) for it in items],
+                         "finish": f"/learn/test/{n}/finish", "close": "/learn"})
+
+
+@app.post("/learn/test/{n}/finish")
+def learn_test_finish(n: int, payload: dict, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if not 1 <= n <= len(learn.course()["stages"]):
+        raise HTTPException(404)
+    before = learn.rank(learn.marks(db, user, "test"), learn.orders(db, user))
+    results = payload.get("results") or {}
+    right, total = learn.schedule(db, user, results)
+    passed = bool(total) and right / total >= learn.PASS
+    db.add(LearnMark(user_id=user.id, kind="test", stage=n, score=right, total=total, passed=passed))
+    if passed:
+        learn.add_xp(db, user, learn.XP["test"])
+    learn.touch(db, user, max(0, min(int(payload.get("seconds") or 0), 3600)))
+    db.flush()
+    after = learn.rank(learn.marks(db, user, "test"), learn.orders(db, user))
+    db.commit()
+    return JSONResponse({"next": f"/learn/test/{n}/result" + (f"?rank={after}" if after > before else "")})
+
+
+@app.get("/learn/test/{n}/result", response_class=HTMLResponse)
+def learn_test_result(request: Request, n: int, rank: int = 0, user: User = Depends(auth.require_user),
+                      db: Session = Depends(get_db)):
+    mark = db.scalars(select(LearnMark).where(LearnMark.user_id == user.id, LearnMark.kind == "test", LearnMark.stage == n)
+                      .order_by(LearnMark.id.desc())).first()
+    if not mark:
+        return see_other("/learn")
+    ov = learn.overview(db, user)
+    new_rank = rank if rank and ov["rank"] >= rank else 0
+    db.commit()
+    return page(request, "learn_done.html", user=user, kind="test", stage=learn.stage(n), mark=mark, ov=ov, L=learn,
+                new_rank=new_rank)
+
+
+@app.get("/learn/task/{n}", response_class=HTMLResponse)
+def learn_task(request: Request, n: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    if not 1 <= n <= len(learn.course()["stages"]) or not learn.stage_open(db, user, n):
+        return see_other("/learn#path")
+    done = learn.marks(db, user, "task").get(n)
+    return page(request, "learn_task.html", user=user, stage=learn.stage(n), done=done)
+
+
+@app.post("/learn/task/{n}")
+def learn_task_save(n: int, note: str = Form(""), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if not 1 <= n <= len(learn.course()["stages"]):
+        raise HTTPException(404)
+    if not learn.marks(db, user, "task").get(n):
+        db.add(LearnMark(user_id=user.id, kind="task", stage=n, passed=True, note=note.strip()[:4000]))
+        learn.add_xp(db, user, learn.XP["task"])
+        learn.touch(db, user)
+        db.commit()
+    return see_other("/learn?task=1#path")
+
+
+@app.get("/learn/order/{oid}", response_class=HTMLResponse)
+def learn_order_view(request: Request, oid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    o = db.get(LearnOrder, oid)
+    if not o or o.user_id != user.id:
+        raise HTTPException(404)
+    sit = learn.order_situation(db, o)
+    if sit and not o.outcome:
+        return see_other(f"/app/{sit.id}#learn-report")
+    return page(request, "learn_order.html", user=user, o=o, les=learn.lesson(o.lesson_id), OUT=learn.OUTCOME_NAMES, L=learn)
+
+
+@app.post("/learn/order/{oid}/report")
+def learn_order_report(oid: int, outcome: str = Form(...), note: str = Form(""), next: str = Form("/learn"),
+                       user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    o = db.get(LearnOrder, oid)
+    if not o or o.user_id != user.id:
+        raise HTTPException(404)
+    before = learn.rank(learn.marks(db, user, "test"), learn.orders(db, user))
+    gained = learn.report(db, user, o, outcome, note)
+    db.flush()
+    after = learn.rank(learn.marks(db, user, "test"), learn.orders(db, user))
+    db.commit()
+    if after > before:
+        stage_n = after
+        return see_other(f"/learn/test/{stage_n}/result?rank={after}")
+    url = safe_next(next)
+    sep = "&" if "?" in url else "?"
+    return see_other(f"{url.split('#')[0]}{sep}learned={gained}#learn-done" if url.startswith("/app/") else f"{url}{sep}learned={gained}")
+
+
+# ---------- Учение штаба ----------
+
+def _team_rows(db: Session, shtab: Shtab) -> list[dict]:
+    rows = []
+    for m in shtab.members:
+        u = m.user
+        done = learn.done_ids(db, u)
+        tests = learn.marks(db, u, "test")
+        ords = learn.orders(db, u)
+        r = learn.rank(tests, ords)
+        cur = next((s["n"] for s in learn.course()["stages"] if not all(x["id"] in done for x in s["lesson_list"])),
+                   len(learn.course()["stages"]))
+        last = max([d for d in [db.scalar(select(func.max(LearnDone.created_at)).where(LearnDone.user_id == u.id))] if d],
+                   default=None)
+        rows.append({"user": u, "member": m, "stage": cur, "done": len(done), "rank": learn.rank_name(r),
+                     "orders": sum(1 for o in ords if o.outcome in ("done", "partial")), "streak": learn.streak(db, u)["days"],
+                     "idle": (now() - last).days if last else None, "is_owner": u.id == shtab.owner_id})
+    return rows
+
+
+@app.get("/shtab/{shtab_id}/learn", response_class=HTMLResponse)
+def shtab_learn(request: Request, shtab_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    if r := _gate(db, user):
+        return r
+    shtab = _member_shtab(db, user, shtab_id)
+    rows = _team_rows(db, shtab)
+    assign = db.scalars(select(LearnAssign).where(LearnAssign.shtab_id == shtab.id).order_by(LearnAssign.id.desc())).first()
+    week_start = learn.today() - dt.timedelta(days=learn.today().weekday())
+    member_ids = [m.user_id for m in shtab.members]
+    week_orders = db.scalar(select(func.count(LearnOrder.id)).where(
+        LearnOrder.user_id.in_(member_ids), LearnOrder.outcome.in_(("done", "partial")),
+        LearnOrder.reported_at >= dt.datetime.combine(week_start, dt.time()) - dt.timedelta(hours=3))) or 0
+    goal = max(5, 5 * len(member_ids))
+    dist = None
+    if assign:
+        st = learn.stage(assign.stage)
+        first = next((it for les in st["lesson_list"] for it in les.get("items", []) if it["type"] == "situation"), None)
+        if first:
+            from .models import LearnItem
+            picks = db.scalars(select(LearnItem.last_pick).where(LearnItem.item_id == first["id"],
+                                                                 LearnItem.user_id.in_(member_ids))).all()
+            counts = [sum(1 for p in picks if p == i) for i in range(len(first["options"]))]
+            dist = {"item": first, "counts": counts, "n": sum(counts), "max": max(counts) if counts and max(counts) else 1}
+    nudges = []
+    if shtab.owner_id == user.id:
+        since = now() - dt.timedelta(days=7)
+        for row in rows:
+            u = row["user"]
+            if u.id == user.id:
+                continue
+            o = db.scalars(select(LearnOrder).where(LearnOrder.user_id == u.id, LearnOrder.outcome == "done",
+                                                    LearnOrder.reported_at >= since).order_by(LearnOrder.id.desc())).first()
+            t = db.scalars(select(LearnMark).where(LearnMark.user_id == u.id, LearnMark.kind == "test", LearnMark.passed.is_(True),
+                                                   LearnMark.created_at >= since).order_by(LearnMark.id.desc())).first()
+            if o:
+                nudges.append({"user": u, "text": f"{u.display_name.split()[0]} исполнил(а) приказ «{o.title}»", "kind": "praise",
+                               "note": f"Видел, что вы исполнили приказ «{o.title}». Так держать!"})
+            elif t:
+                nudges.append({"user": u, "text": f"{u.display_name.split()[0]} сдал(а) смотр этапа {t.stage}", "kind": "praise",
+                               "note": f"Поздравляю со смотром этапа {t.stage}!"})
+            elif row["idle"] is None or row["idle"] >= 5:
+                nudges.append({"user": u, "text": f"{u.display_name.split()[0]} давно не заходил(а) в «Учение»", "kind": "nudge",
+                               "note": "Жду вас в «Учении»: пять минут сегодня."})
+    return page(request, "shtab_learn.html", user=user, shtab=shtab, rows=rows, assign=assign, week_orders=week_orders,
+                goal=goal, dist=dist, nudges=nudges, is_owner=shtab.owner_id == user.id, course=learn.course(),
+                sent=request.query_params.get("sent", ""))
+
+
+@app.post("/shtab/{shtab_id}/learn/assign")
+def shtab_learn_assign(shtab_id: int, stage: int = Form(...), due: str = Form(""), user: User = Depends(auth.require_user),
+                       db: Session = Depends(get_db)):
+    shtab = _member_shtab(db, user, shtab_id)
+    if shtab.owner_id != user.id or not 1 <= stage <= len(learn.course()["stages"]):
+        raise HTTPException(403)
+    try:
+        d = dt.date.fromisoformat(due) if due else None
+    except ValueError:
+        d = None
+    db.add(LearnAssign(shtab_id=shtab.id, stage=stage, due=d))
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}/learn?sent=assign")
+
+
+@app.post("/shtab/{shtab_id}/learn/note")
+def shtab_learn_note(shtab_id: int, to_id: int = Form(...), text: str = Form(...), user: User = Depends(auth.require_user),
+                     db: Session = Depends(get_db)):
+    shtab = _member_shtab(db, user, shtab_id)
+    if shtab.owner_id != user.id or to_id not in [m.user_id for m in shtab.members]:
+        raise HTTPException(403)
+    db.add(LearnNote(from_id=user.id, to_id=to_id, text=text.strip()[:300] or "Так держать!"))
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}/learn?sent=note")

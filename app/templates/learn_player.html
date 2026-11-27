@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic %}
+{% block title %}{{ title }} — Учение — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<div class="uc-player" data-player>
+  <header class="uc-player__bar">
+    <a class="uc-close" href="{{ payload.close }}" aria-label="Закрыть и вернуться в «Учение»">{{ ic('close') }}</a>
+    <div class="uc-prog" role="progressbar" aria-label="Ход" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-prog></div>
+    <span class="uc-xp" data-score>{{ ic('check') }}<b>0</b></span>
+  </header>
+
+  <main class="uc-player__main">
+  <h1 class="sr-only">{{ title }}</h1>
+  <div class="uc-player__body" data-body aria-live="polite">
+    <p class="uc-kicker" data-kicker>{% if mode == 'lesson' %}<b>Этап {{ stage.n }} · урок {{ les.no }}</b>· {{ les.title }}{% else %}<b>{{ title }}</b>{% endif %}</p>
+    <div class="uc-screen" data-stage></div>
+    <noscript><p class="error">Для уроков нужен JavaScript.</p></noscript>
+  </div>
+
+  {% if mode == 'lesson' %}
+  <form class="uc-player__body" method="post" action="/learn/lesson/{{ les.id }}/order" data-order hidden style="padding-bottom: 140px">
+    <p class="uc-kicker"><b>Приказ на неделю</b>· последний шаг урока</p>
+    <h1 class="uc-q">Примените правило в своём деле</h1>
+    <fieldset style="border: 0; margin: 0; padding: 0; display: grid; gap: 8px">
+      <legend class="uc-label" style="margin-bottom: 8px">Где применить</legend>
+      <div class="uc-plans">
+        {% for p in plans %}{% set hint = L.plan_hint(p) if L is defined else '' %}
+        <label class="uc-plan"><input type="radio" name="plan_id" value="{{ p.id }}" {% if loop.first %}checked{% endif %}><span><b>{{ p.title }}</b><span>План от {{ p.created_at.date()|ru_date }} · {{ p.steps|length|plural('шаг', 'шага', 'шагов') }}, закрыто {{ p.steps|selectattr('done')|list|length }}</span></span>{% if hint %}<span class="uc-tag uc-tag--red">{{ hint }}</span>{% endif %}</label>
+        {% endfor %}
+        <label class="uc-plan"><input type="radio" name="plan_id" value="0" {% if not plans %}checked{% endif %}><span><b>Отдельной задачей</b><span>Без плана, со своим сроком</span></span></label>
+      </div>
+    </fieldset>
+    <div class="uc-fields">
+      <p class="uc-label" style="margin: 0">Приказ · заполнили по уроку, поправьте под себя</p>
+      <div class="uc-field"><label for="f-if">Если</label><textarea id="f-if" name="if_text" rows="2" required>{{ les.order.if }},</textarea></div>
+      <div class="uc-field"><label for="f-then">то</label><textarea id="f-then" name="then_text" rows="3" required>{{ les.order.then }}.</textarea></div>
+      <div class="uc-field"><label for="f-due">до</label>
+        <div class="uc-row2">
+          <input id="f-due" name="due" type="date" value="{{ due.isoformat() }}" min="{{ today.isoformat() }}" aria-label="Срок">
+          <input id="f-who" name="who" type="text" value="Я" aria-label="Исполнитель" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <p class="uc-sub" style="margin: 0">Приказ встанет шагом в выбранный план. В срок мы спросим одним вопросом, как прошло. Исполненный приказ — +50 опыта и шаг к новому чину.</p>
+    <footer class="uc-act" style="position: fixed; left: 0; right: 0; bottom: 0">
+      <div class="uc-act__in">
+        <button class="btn btn--secondary" type="submit" name="skip" value="1" formnovalidate style="height: 52px">Без приказа</button>
+        <button class="btn btn--primary" type="submit" style="margin-left: 0">Поставить приказ</button>
+      </div>
+    </footer>
+  </form>
+  {% endif %}
+  </main>
+
+  <footer class="uc-act" data-act>
+    <div class="uc-act__in" data-act-in></div>
+  </footer>
+</div>
+<script type="application/json" id="uc-data">{{ payload|tojson }}</script>
+<script src="/static/learn.js?v=1" defer></script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_uc.html" import ic %}
+{% block title %}Учение штаба «{{ shtab.name }}» — {{ BRAND }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% block body %}
+<a class="skip-link" href="#learn">К учению штаба</a>
+<header class="shtab-head">
+  <div class="shtab-head__in">
+    <div class="crumbs"><a href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>К разговорам</a></div>
+    <div class="shtab-head__row">
+      <div>
+        <h1>Штаб «{{ shtab.name }}»</h1>
+        <p>{{ shtab.members|length|plural('участник', 'участника', 'участников') }}{% if is_owner %} · вы глава{% endif %}</p>
+      </div>
+      <a class="btn btn--secondary" href="/learn">Моё учение</a>
+    </div>
+    <nav class="uc-tabs" aria-label="Разделы штаба" style="margin-top: 16px"><a href="/shtab/{{ shtab.id }}">Задачи</a><a href="/shtab/{{ shtab.id }}/learn" aria-current="page">Учение</a></nav>
+  </div>
+</header>
+
+<main class="uc-page" id="learn" style="max-width: 1120px">
+  {% if sent == 'assign' %}<p class="uc-flash" role="status">Этап назначен: участники увидят его первым в рекомендациях.</p>{% endif %}
+  {% if sent == 'note' %}<p class="uc-flash" role="status">Отправлено: участник увидит это, когда откроет «Учение».</p>{% endif %}
+  <div class="uc-grid">
+    <div class="uc-col">
+      <div class="uc-hero" style="gap: 16px">
+        <p class="uc-label">Общая цель недели</p>
+        <h2 style="font-size: 28px">{{ week_orders }} из {{ goal|plural('приказа', 'приказов', 'приказов') }} исполнено</h2>
+        <div class="uc-track__bar" style="background: rgb(255 253 248 / .14)" role="progressbar" aria-label="Цель недели" aria-valuemin="0" aria-valuemax="{{ goal }}" aria-valuenow="{{ week_orders }}"><i style="width: {{ [100, week_orders * 100 // goal]|min }}%; background: #e9cf97"></i></div>
+        <p style="font-size: 15px">{% if assign %}Назначен этап {{ assign.stage }} «{{ course.stages[assign.stage - 1].name }}»{% if assign.due %} до {{ assign.due|ru_date }}{% endif %}.{% else %}Этап для команды пока не назначен.{% endif %} Цель — пять исполненных приказов на человека в неделю.</p>
+      </div>
+
+      <div class="uc-card">
+        <div class="uc-card__head"><h2 class="uc-h2">Команда</h2><span class="uc-sub" style="margin: 0">участники знают, что глава видит их прогресс</span></div>
+        <div style="overflow-x: auto" tabindex="0" role="region" aria-label="Таблица">
+        <table class="uc-team">
+          <thead><tr><th scope="col">Участник</th><th scope="col">Путь</th><th scope="col">Чин</th><th scope="col">Приказы</th><th scope="col">Ряд</th></tr></thead>
+          <tbody>
+          {% for r in rows %}
+            <tr><td><span class="uc-who"><span class="av {% if r.is_owner %}av--ink{% endif %}">{{ r.user.initials }}</span><span><b>{{ r.user.display_name }}</b><span>{% set t = r.member.title or (r.user.role or '') %}{{ t }}{% if r.is_owner and 'глав' not in t|lower %}{% if t %} · {% endif %}глава{% endif %}</span></span></span></td>
+              <td><span class="uc-mini" role="img" aria-label="Этап {{ r.stage }} из 9, уроков пройдено {{ r.done }}">{% for i in range(1, 10) %}<i class="{{ 'on' if i < r.stage else ('now' if i == r.stage else '') }}"></i>{% endfor %}</span></td>
+              <td>{{ r.rank }}</td><td class="uc-num">{{ r.orders }}</td>
+              <td class="uc-num" {% if r.idle is none or r.idle >= 5 %}style="color: #7e0f24"{% endif %}>{% if r.streak %}{{ r.streak|plural('день', 'дня', 'дней') }}{% elif r.idle is none %}не начинал(а){% elif r.idle >= 5 %}не заходил(а) {{ r.idle|plural('день', 'дня', 'дней') }}{% else %}—{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <aside class="uc-col">
+      {% if is_owner %}
+      <form class="uc-card" method="post" action="/shtab/{{ shtab.id }}/learn/assign" aria-labelledby="as-h">
+        <h2 class="uc-h2" id="as-h">Назначить этап</h2>
+        <label class="uc-label" for="as-stage">Этап</label>
+        <select id="as-stage" name="stage" class="uc-report__note">
+          {% for s in course.stages %}<option value="{{ s.n }}" {% if assign and assign.stage == s.n %}selected{% endif %} {% if not s.ready %}disabled{% endif %}>{{ s.n }}. {{ s.name }}{% if not s.ready %} — готовится{% endif %}</option>{% endfor %}
+        </select>
+        <label class="uc-label" for="as-due">Срок</label>
+        <input id="as-due" type="date" name="due" class="uc-report__note">
+        <button class="btn btn--primary" type="submit">Назначить</button>
+      </form>
+      {% endif %}
+
+      {% if dist %}
+      <div class="uc-card">
+        <div class="uc-card__head"><h2 class="uc-h2">Учение штаба</h2></div>
+        <p style="margin: 0; font-size: 15px">Ответы в ситуации урока {{ course.lessons[dist.item.lesson].title|q }} · без имён, ответили {{ dist.n }}</p>
+        <p class="uc-sub" style="margin: 0">{{ dist.item.scene }}</p>
+        <div class="uc-dist">
+          {% for c in dist.counts %}
+          <div class="uc-dist__row"><b>{{ loop.index }}</b><span class="uc-dist__bar" title="{{ dist.item.options[loop.index0] }}"><i class="{{ 'right' if loop.index0 == dist.item.answer else '' }}" style="width: {{ c * 100 // dist.max }}%"></i></span><span class="uc-num">{{ c }}</span></div>
+          {% endfor %}
+        </div>
+        <ol style="margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 13px; color: #46463e">{% for o in dist.item.options %}<li>{{ o }}{% if loop.index0 == dist.item.answer %} — верно{% endif %}</li>{% endfor %}</ol>
+        <p class="uc-sub" style="margin: 0">Разберите на планёрке, почему верный ответ работает лучше. Десять минут.</p>
+      </div>
+      {% endif %}
+
+      {% if is_owner %}
+      <div class="uc-card">
+        <h2 class="uc-h2">Поддержать</h2>
+        {% if nudges %}
+        <div>
+          {% for n in nudges %}
+          <form class="uc-nudge" method="post" action="/shtab/{{ shtab.id }}/learn/note">
+            <span class="av av--sm" aria-hidden="true">{{ n.user.initials }}</span><p>{{ n.text }}</p>
+            <input type="hidden" name="to_id" value="{{ n.user.id }}"><input type="hidden" name="text" value="{{ n.note }}">
+            <button type="submit" class="btn btn--secondary">{% if n.kind == 'praise' %}Похвалить{% else %}Напомнить{% endif %}</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% else %}<p class="uc-sub" style="margin: 0">Здесь появятся исполненные приказы и сданные смотры команды — поводы похвалить.</p>{% endif %}
+        <p class="uc-sub" style="margin: 0; font-size: 13px">Ответы «своими словами» и ошибки в упражнениях видят только сами участники.</p>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+</main>
+{% endblock %}
