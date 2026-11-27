@@ -27,8 +27,10 @@
     {% if user.email in settings().admins %}<a href="/admin"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13V8M8 13V3M13 13V6"/></svg>Владелец</a>{% endif %}
   </nav>
   <div class="me">
-    <span class="av av--ink">{{ user.initials }}</span>
-    <span><b>{{ user.display_name }}</b><span>{{ LEVELS.get(user.level, '') }}</span></span>
+    <a class="me__who" href="/billing" aria-label="{{ user.display_name }}: {{ plan.tier_name|lower }} тариф{% if plan.lifetime %} навсегда{% endif %}. Тариф и оплата">
+      <span class="av av--ink">{{ user.initials }}</span>
+      <span class="me__txt"><b>{{ user.display_name }}</b><span>{% if plan.lifetime %}Полный · навсегда{% else %}{{ plan.tier_name }} тариф{% endif %}</span></span>
+    </a>
     <form method="post" action="/logout" class="me__out"><button type="submit" aria-label="Выйти" class="icon-btn icon-btn--sm"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3H3.5v10H6M10 5l3 3-3 3M13 8H6"/></svg></button></form>
   </div>
 </aside>
