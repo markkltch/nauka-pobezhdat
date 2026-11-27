@@ -165,7 +165,7 @@
         <div class="msg msg--bot">
           <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
           <div class="bot">{% for para in m.text.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
-            {% if m.data and m.data.learn_order %}<p class="uc-toast" role="status" id="learn-done"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5l1.7 3.6 3.8.5-2.8 2.7.7 3.8L8 11.3 4.6 13.1l.7-3.8L2.5 6.6l3.8-.5z"/></svg><span>Отчёт по приказу из урока «{{ m.data.lesson }}» принят. Итог записан в «Люди и уроки». <a class="link-u" href="/learn" style="color: #e9cf97">В «Учение»</a></span></p>{% endif %}</div>
+            {% if m.data and m.data.learn_order %}<p class="uc-toast" role="status" id="learn-done"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5l1.7 3.6 3.8.5-2.8 2.7.7 3.8L8 11.3 4.6 13.1l.7-3.8L2.5 6.6l3.8-.5z"/></svg><span>Отчёт по приказу из урока {{ m.data.lesson|q }} принят. Итог записан в «Люди и уроки». <a class="link-u" href="/learn" style="color: #e9cf97">В «Учение»</a></span></p>{% endif %}</div>
         </div>
         {% endif %}
       {% endfor %}
