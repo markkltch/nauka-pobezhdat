@@ -17,8 +17,13 @@ from .config import get_settings
 
 API = "https://securepay.tinkoff.ru/v2"
 PREFIX = "tbank:"
-PAYMENT_HOSTS = {"securepayments.tinkoff.ru", "securepayments.tbank.ru",
-                 "securepay.tinkoff.ru", "securepay.tbank.ru"}
+PAYMENT_HOSTS = {
+    "securepayments.tinkoff.ru",
+    "securepayments.tbank.ru",
+    "securepay.tinkoff.ru",
+    "securepay.tbank.ru",
+    "pay.linksecurepayment.com",  # Hosted checkout URL returned by T-Bank's Init API.
+}
 CANCELED_STATUSES = {"CANCELED", "REJECTED", "AUTH_FAIL", "DEADLINE_EXPIRED", "REVERSED", "REFUNDED"}
 FINAL_STATUSES = CANCELED_STATUSES | {"CONFIRMED"}
 
