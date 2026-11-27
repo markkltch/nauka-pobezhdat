@@ -401,3 +401,12 @@
 .uc-matchopt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .uc-matchopt.is-used { color: var(--muted); }
 .uc-matchfix { font-size: 14px; color: #23452f; }
+
+/* the entry smotr card: text and button side by side on a wide screen, stacked on a phone */
+.uc-diag { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 24px; }
+.uc-diag .uc-h2 { hyphens: manual; -webkit-hyphens: manual; text-wrap: balance; }
+.uc-diag .uc-sub { margin-bottom: 0; text-wrap: pretty; }
+@media (max-width: 759px) {
+  .uc-diag { grid-template-columns: minmax(0, 1fr); row-gap: 16px; }
+  .uc-diag .btn { width: 100%; }
+}

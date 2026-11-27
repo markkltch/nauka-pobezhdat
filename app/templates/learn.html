@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "_uc.html" import ic, bar, week %}
 {% block title %}Учение — {{ BRAND }}{% endblock %}
-{% block head %}<link rel="stylesheet" href="/static/learn.css?v=2">{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/learn.css?v=3">{% endblock %}
 {% from "_quick.html" import quick %}
 {% block body %}
 <a class="skip-link" href="#learn">К учению</a>
@@ -26,7 +26,7 @@
       {% if q.get('review') == 'none' %}<p class="uc-flash" role="status">Повторять пока нечего: упражнения вернутся по графику.</p>{% endif %}
 
       {% if not ov.state.diag_at %}
-      <section class="uc-card" aria-labelledby="diag-h" style="grid-template-columns: 1fr auto; align-items: center">
+      <section class="uc-card uc-diag" aria-labelledby="diag-h">
         <div><h2 class="uc-h2" id="diag-h">Начните со вступительного смотра</h2><p class="uc-sub">9 ситуаций, 4 минуты. По ответам и вашим разборам мы соберём карту навыков и подберём путь.</p></div>
         <a class="btn btn--primary" href="/learn/start">Пройти смотр</a>
       </section>
