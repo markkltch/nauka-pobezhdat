@@ -3,16 +3,19 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import logging
 import secrets
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import mailer
+from . import emails, mailer
 from .config import get_settings
 from .db import get_db
 from .models import AuthSession, LoginCode, User, now
+
+log = logging.getLogger("auth")
 
 COOKIE = "np_session"
 CODE_TTL = dt.timedelta(minutes=15)
@@ -56,19 +59,7 @@ def start_login(db: Session, email: str, next_url: str = "/app", name: str = "",
     db.add(row)
     db.commit()
     link = f"{get_settings().base_url}/login/link/{row.link_token}?next={next_url}"
-    if name or pending_pw:
-        subject, lead = f"Подтвердите почту: {code}", "Код для подтверждения регистрации"
-        tail = "Если вы не регистрировались, просто удалите это письмо."
-    else:
-        subject, lead = f"Код входа: {code}", "Ваш код для входа"
-        tail = "Если вы не запрашивали вход, просто удалите это письмо."
-    mailer.send(
-        email,
-        subject,
-        f"{lead} в «Наука побеждать · Штаб»: {code}\n\n"
-        f"Или откройте ссылку: {link}\n\n"
-        f"Код действует 15 минут. {tail}",
-    )
+    mailer.send_letter(email, emails.login_code(code, link, register=bool(name or pending_pw)))
 
 
 def _apply_pending(db: Session, user: User, row: LoginCode) -> User:
@@ -87,12 +78,29 @@ def account_exists(db: Session, email: str) -> bool:
     return db.scalars(select(User.id).where(User.email == normalize_email(email))).first() is not None
 
 
-def _user_for(db: Session, email: str) -> User:
+def _user_for(db: Session, email: str) -> tuple[User, bool]:
     user = db.scalars(select(User).where(User.email == email)).first()
-    if not user:
-        user = User(email=email)
-        db.add(user)
-        db.commit()
+    if user:
+        return user, False
+    user = User(email=email)
+    db.add(user)
+    db.commit()
+    return user, True
+
+
+def send_welcome(user: User) -> None:
+    """The first letter after the account is made; a failed letter never blocks the sign-in."""
+    try:
+        mailer.send_letter(user.email, emails.welcome(user.name or ""))
+    except Exception:  # noqa: BLE001
+        log.exception("welcome letter failed for user %s", user.id)
+
+
+def _enter(db: Session, email: str, row: LoginCode) -> User:
+    user, created = _user_for(db, email)
+    user = _apply_pending(db, user, row)
+    if created:
+        send_welcome(user)
     return user
 
 
@@ -111,7 +119,7 @@ def check_code(db: Session, email: str, code: str) -> User | None:
         return None
     row.used = True
     db.commit()
-    return _apply_pending(db, _user_for(db, email), row)
+    return _enter(db, email, row)
 
 
 def check_link(db: Session, link_token: str) -> User | None:
@@ -122,7 +130,7 @@ def check_link(db: Session, link_token: str) -> User | None:
         return None
     row.used = True
     db.commit()
-    return _apply_pending(db, _user_for(db, row.email), row)
+    return _enter(db, row.email, row)
 
 
 def open_session(db: Session, user: User) -> AuthSession:

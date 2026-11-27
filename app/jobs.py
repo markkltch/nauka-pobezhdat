@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import or_, select
 
-from . import billing, mailer
+from . import billing, emails, mailer
 from .config import get_settings
 from .db import SessionLocal
 from .models import Plan, Situation, Step, User, now
@@ -55,8 +55,7 @@ def send_reminders(db) -> int:
         if step.due < dt.date.today():
             when = f"был {step.due:%d.%m} — срок прошёл"
         try:
-            mailer.send(to_user.email, f"Срок {when}: {step.text[:60]}",
-                        f"Напоминание от наставника.\n\nЗадача: {step.text}\nСрок: {when}\n\nОткрыть: {where}")
+            mailer.send_letter(to_user.email, emails.reminder(to_user.id, step.text, when, where, step.due < dt.date.today()))
             step.reminded_at = now()
             sent += 1
         except Exception:  # noqa: BLE001 — one bad address must not stop the rest
@@ -94,24 +93,18 @@ def send_morning_reports(db) -> int:
         user.report_sent_on = today
         if not (overdue or due_today or to_review):
             continue
-        lines = [f"Доброе утро, {user.name.split()[0] if user.name else 'командир'}. Донесение на {today:%d.%m}.", ""]
-        for title, items in (("Срок прошёл", overdue), ("На сегодня", due_today), ("На завтра", tomorrow)):
-            if items:
-                lines.append(f"{title}:")
-                lines += [f"— {s.text[:120]} ({s.owner_name or 'вы'}) {_situation_link(db, s, base)}" for s in items[:8]]
-                lines.append("")
-        if to_review:
-            lines.append("Пора подвести итог (разбор после дела):")
-            lines += [f"— {s.title} {base}/app/{s.id}#aar" for s in to_review[:5]]
-            lines.append("")
-        learn_line = _learn_line(db, user, base)
-        if learn_line:
-            lines += [learn_line, ""]
-        lines.append(f"Отключить донесение: {base}/settings#notify")
+
+        def row(st: Step) -> tuple[str, str, str]:
+            return st.text[:160], st.owner_name or "вы", _situation_link(db, st, base)
+
+        sections = [("Срок прошёл", [row(x) for x in overdue[:8]]), ("На сегодня", [row(x) for x in due_today[:8]]),
+                    ("На завтра", [row(x) for x in tomorrow[:8]])]
+        review = [(x.title, f"{base}/app/{x.id}#aar") for x in to_review[:5]]
+        learn_pair = _learn_line(db, user, base)
         subject = f"Донесение: {len(overdue)} просрочено, {len(due_today)} на сегодня" if (overdue or due_today) \
             else "Донесение: пора подвести итог"
         try:
-            mailer.send(user.email, subject, "\n".join(lines))
+            mailer.send_letter(user.email, emails.morning(user.id, user.name or "", today, sections, review, learn_pair, subject))
             sent += 1
         except Exception:  # noqa: BLE001
             log.exception("morning report failed for user %s", user.id)
@@ -119,23 +112,31 @@ def send_morning_reports(db) -> int:
     return sent
 
 
-def _learn_line(db, user: User, base: str) -> str:
+def _learn_line(db, user: User, base: str) -> tuple[str, str] | None:
     """«Урок дня» in the morning report, for people who keep it on in «Учение»."""
     from . import learn
 
     st = learn.state(db, user, create=False)
     if not st or not st.in_report:
-        return ""
+        return None
     ov_done = learn.done_ids(db, user)
     tests = learn.marks(db, user, "test")
     rec = learn.recommend(db, user, ov_done, tests, learn.signals(db, user), learn.orders(db, user))
     if rec["kind"] == "lesson":
-        return f"Учение: урок дня «{rec['lesson']['title']}», {rec['lesson'].get('minutes') or 5} минут — {base}/learn/lesson/{rec['lesson']['id']}"
+        m = rec["lesson"].get("minutes") or 5
+        word = "минута" if m % 10 == 1 and m % 100 != 11 else "минуты" if 2 <= m % 10 <= 4 and not 12 <= m % 100 <= 14 else "минут"
+        return (f"Урок дня «{rec['lesson']['title']}», {m} {word}",
+                f"{base}/learn/lesson/{rec['lesson']['id']}")
     if rec["kind"] == "review":
-        return f"Учение: повторение на 2 минуты — {base}/learn/review"
+        return "Повторение на 2 минуты", f"{base}/learn/review"
     if rec["kind"] == "report":
-        return f"Учение: срок приказа «{rec['order'].title}» — отметьте, как прошло: {base}/learn/order/{rec['order'].id}"
-    return ""
+        return f"Срок приказа «{rec['order'].title}» — отметьте, как прошло", f"{base}/learn/order/{rec['order'].id}"
+    return None
+
+
+def send_renewal_reminders(db) -> int:
+    """«Доступ заканчивается» letters, in the daytime only."""
+    return billing.remind_renewals(db) if daytime() else 0
 
 
 def _loop() -> None:
@@ -145,6 +146,7 @@ def _loop() -> None:
                 send_reminders(db)
                 send_morning_reports(db)
                 billing.renew_due(db)
+                send_renewal_reminders(db)
         except Exception:  # noqa: BLE001
             log.exception("job round failed")
         time.sleep(INTERVAL_S)

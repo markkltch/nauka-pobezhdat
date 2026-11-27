@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hmac
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
+from . import access, auth, billing, emails, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
 from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, PackOrder, Payment,
@@ -335,11 +336,42 @@ def yandex_callback(request: Request, code: str = "", state: str = "", error: st
             found = User(email=prof["email"], name=prof["name"][:120],
                          ip_consent_at=now() if mode == "register-ip" else None)
             db.add(found)
+            found.yandex_id = prof["id"]
+            db.commit()
+            auth.send_welcome(found)
         found.yandex_id = prof["id"]
         db.commit()
         resp = _signed_in(db, found, safe_next(next_url))
     resp.delete_cookie("ya_state")
     return resp
+
+
+# ---------- one-click unsubscribe (List-Unsubscribe) ----------
+
+def _unsub_user(db: Session, uid: int, kind: str, token: str) -> User:
+    if kind not in emails.KINDS or not hmac.compare_digest(token, emails.unsub_token(uid, kind)):
+        raise HTTPException(404)
+    user = db.get(User, uid)
+    if not user:
+        raise HTTPException(404)
+    return user
+
+
+@app.get("/unsubscribe/{uid}/{kind}/{token}", response_class=HTMLResponse)
+def unsubscribe_page(request: Request, uid: int, kind: str, token: str, db: Session = Depends(get_db)):
+    _unsub_user(db, uid, kind, token)
+    return page(request, "unsubscribe.html", kind=emails.KINDS[kind], done=False)
+
+
+@app.post("/unsubscribe/{uid}/{kind}/{token}", response_class=HTMLResponse)
+def unsubscribe_do(request: Request, uid: int, kind: str, token: str, db: Session = Depends(get_db)):
+    user = _unsub_user(db, uid, kind, token)
+    if kind == "steps":
+        user.remind_steps = False
+    else:
+        user.morning_report = False
+    db.commit()
+    return page(request, "unsubscribe.html", kind=emails.KINDS[kind], done=True)
 
 
 # ---------- settings ----------

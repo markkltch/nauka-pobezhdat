@@ -87,7 +87,7 @@
       <section class="card" aria-labelledby="h-plan">
         <h2 id="h-plan">Тариф</h2>
         <div class="rows">
-          <p><span>Тариф</span><b>{{ plan.tier_name }}</b></p>
+          <p><span>Тариф</span><b>{{ plan.tier_name }}{% if plan.lifetime %}, навсегда{% endif %}</b></p>
           <p><span>Разборов в этом месяце</span><b>{{ plan.used }} из {{ plan.allowance }}{% if plan.extra %}, в запасе {{ plan.extra }}{% endif %}</b></p>
           <p><span>Голосовых осталось</span><b>{{ voice_left }}</b></p>
         </div>

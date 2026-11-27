@@ -38,8 +38,13 @@ def _covered_by_shtab(db: Session, user: User) -> bool:
     return False
 
 
+def lifetime(user: User) -> bool:
+    """The full plan for good: the owners and the people they named (LIFETIME_EMAILS)."""
+    return (user.email or "").lower() in get_settings().lifetime
+
+
 def tier(db: Session, user: User) -> str:
-    if get_settings().free_beta:
+    if get_settings().free_beta or lifetime(user):
         return PRO
     own = db.scalars(select(Subscription).where(Subscription.payer_id == user.id, Subscription.shtab_id.is_(None))
                      .where(Subscription.status == "active", Subscription.paid_until > now())
@@ -73,5 +78,5 @@ def consume(db: Session, user: User) -> None:
 
 def summary(db: Session, user: User) -> dict:
     t = tier(db, user)
-    return {"tier": t, "tier_name": NAMES[t], "used": used_this_month(db, user),
+    return {"tier": t, "tier_name": NAMES[t], "lifetime": lifetime(user), "used": used_this_month(db, user),
             "allowance": allowance(db, user), "extra": user.extra_plans or 0}

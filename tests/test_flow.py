@@ -196,3 +196,50 @@ def test_code_login_unknown_address_points_to_signup(client):
     client.cookies.clear()
     r = client.post("/login", data={"email": "nobody@example.ru"})
     assert "Зарегистрироваться" in r.text and "Аккаунта с почтой" in r.text
+
+
+def test_letters_and_unsubscribe(client, monkeypatch):
+    from app import emails, mailer
+    from app.config import get_settings
+    from app.models import User
+
+    sent = []
+    monkeypatch.setattr(mailer, "_deliver", lambda msg: sent.append(msg))
+    # a new account gets the code letter (text + HTML) and, after sign-in, the welcome letter
+    client.cookies.clear()
+    client.post("/login", data={"email": "letters@example.ru", "consent": "1", "next": "/app"})
+    code_msg = sent[-1]
+    assert code_msg["Subject"].startswith("Код входа") and code_msg["Message-ID"] and code_msg["Date"]
+    html = code_msg.get_body(("html",)).get_content()
+    with SessionLocal() as db:
+        row = db.scalars(select(LoginCode).where(LoginCode.email == "letters@example.ru")).first()
+        code = row.code
+    assert code in html and "/login/link/" in html
+    client.post("/login/code", data={"email": "letters@example.ru", "code": code, "next": "/app"})
+    assert any("Добро пожаловать" in m["Subject"] for m in sent)
+    # one-click unsubscribe works without signing in and only with the right token
+    with SessionLocal() as db:
+        uid = db.scalars(select(User.id).where(User.email == "letters@example.ru")).one()
+    letter = emails.reminder(uid, "Сделать отчёт", "завтра", "http://testserver/app", False)
+    msg = mailer.build("letters@example.ru", letter.subject, letter.text, letter.html, letter.unsubscribe)
+    assert msg["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
+    client.cookies.clear()
+    assert client.post(f"/unsubscribe/{uid}/steps/{'0' * 32}").status_code == 404
+    assert "Отписаться" in client.get(letter.unsubscribe.replace(get_settings().base_url.rstrip("/"), "")).text
+    assert "Готово" in client.post(letter.unsubscribe.replace(get_settings().base_url.rstrip("/"), "")).text
+    with SessionLocal() as db:
+        assert db.get(User, uid).remind_steps is False
+
+
+def test_lifetime_access(monkeypatch):
+    from app import access
+    from app.config import get_settings
+    from app.models import User
+
+    s = get_settings()
+    monkeypatch.setattr(s, "free_beta", False)
+    monkeypatch.setattr(s, "lifetime_emails", "Friend@Example.ru")
+    with SessionLocal() as db:
+        assert access.tier(db, User(email="friend@example.ru")) == access.PRO
+        assert access.tier(db, User(email="boss@example.ru")) == access.PRO  # owners too
+        assert access.tier(db, User(email="someone@example.ru")) == access.FREE

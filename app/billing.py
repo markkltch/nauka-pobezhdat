@@ -13,7 +13,7 @@ import httpx
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from . import tbank
+from . import emails, mailer, tbank
 from .config import get_settings
 from .models import PackOrder, Payment, Shtab, Subscription, User, now
 
@@ -123,6 +123,8 @@ def _sync_pack(db: Session, order: PackOrder) -> None:
         user = db.get(User, order.user_id)
         user.extra_plans = (user.extra_plans or 0) + order.plans
         order.credited = True
+        db.commit()
+        notify_paid(db, order)
     db.commit()
 
 
@@ -155,7 +157,54 @@ def _sync_tbank(db: Session, order: Payment | PackOrder) -> str:
             sub.paid_until = max(start, previous_end or start) + PERIOD
             sub.status = "active"
     db.commit()
+    if status == "succeeded":
+        notify_paid(db, order)
     return status
+
+
+def notify_paid(db: Session, order: Payment | PackOrder) -> None:
+    """«Оплата прошла» to the payer; a failed letter never undoes the payment."""
+    try:
+        if isinstance(order, PackOrder):
+            user = db.get(User, order.user_id)
+            what, until = f"Пакет разборов · {order.plans} шт.", None
+        else:
+            sub = db.get(Subscription, order.subscription_id)
+            user = db.get(User, sub.payer_id)
+            shtab = db.get(Shtab, sub.shtab_id) if sub.shtab_id else None
+            what = f"Полный доступ, штаб «{shtab.name}» · мест: {sub.seats}" if shtab else "Полный доступ · 1 место"
+            until = sub.paid_until
+        mailer.send_letter(user.email, emails.paid(what, order.amount_rub, until))
+    except Exception:  # noqa: BLE001
+        log.exception("paid letter failed for %s %s", type(order).__name__, order.id)
+
+
+def remind_renewals(db: Session) -> int:
+    """«Доступ заканчивается»: three days before the end of a period that does not renew by itself, once."""
+    from .access import lifetime
+
+    soon = now() + dt.timedelta(days=3)
+    subs = db.scalars(select(Subscription).where(Subscription.status == "active", Subscription.paid_until > now(),
+                                                 Subscription.paid_until < soon, Subscription.payment_method_id == "")).all()
+    sent = 0
+    for sub in subs:
+        if sub.renew_reminded_at and sub.renew_reminded_at > sub.paid_until - dt.timedelta(days=10):
+            continue
+        payer = db.get(User, sub.payer_id)
+        later = db.scalar(select(func.max(Subscription.paid_until)).where(
+            Subscription.payer_id == sub.payer_id, Subscription.shtab_id == sub.shtab_id, Subscription.status == "active"))
+        sub.renew_reminded_at = now()
+        if not payer or lifetime(payer) or (later and later > soon):
+            continue
+        shtab = db.get(Shtab, sub.shtab_id) if sub.shtab_id else None
+        what = f"Штаб «{shtab.name}»" if shtab else "Личный доступ"
+        try:
+            mailer.send_letter(payer.email, emails.renew_soon(what, sub.paid_until))
+            sent += 1
+        except Exception:  # noqa: BLE001
+            log.exception("renewal letter failed for subscription %s", sub.id)
+    db.commit()
+    return sent
 
 
 def sync_payment(db: Session, provider_id: str) -> str | None:
@@ -187,6 +236,8 @@ def sync_payment(db: Session, provider_id: str) -> str | None:
         if method.get("saved"):
             sub.payment_method_id = method.get("id", "")
     db.commit()
+    if p["status"] == "succeeded" and sub:
+        notify_paid(db, pay)
     return pay.status
 
 

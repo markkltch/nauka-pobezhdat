@@ -1,0 +1,15 @@
+{% extends "_card.html" %}
+{% block title %}Отписка — {{ BRAND }}{% endblock %}
+{% block card %}
+{% if done %}
+<h1>Готово</h1>
+<p>Больше не пришлём {{ kind }}. Включить обратно можно в <a class="link-u" href="/settings#notify">настройках</a>.</p>
+{% else %}
+<h1>Отписаться?</h1>
+<p>Перестанем присылать {{ kind }}. Остальные письма — коды входа и оплата — продолжат приходить.</p>
+<form method="post" class="form-stack">
+  <button class="btn btn--primary" type="submit">Отписаться</button>
+</form>
+<p class="small muted" style="margin-top: 16px">Передумали — просто закройте страницу.</p>
+{% endif %}
+{% endblock %}

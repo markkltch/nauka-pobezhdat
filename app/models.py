@@ -215,6 +215,7 @@ class Subscription(Base):
     seats: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending | active | canceled
     paid_until: Mapped[dt.datetime | None] = mapped_column(DateTime)
+    renew_reminded_at: Mapped[dt.datetime | None] = mapped_column(DateTime)  # the «доступ заканчивается» letter
     payment_method_id: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
 

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     # access
     free_beta: bool = True  # everyone gets the full plan without payment until billing is live
+    lifetime_emails: str = ""  # comma-separated: the full plan for good, without payment (the owners get it too)
     monthly_plan_limit: int = 30  # разборов per paid person per month
     free_plans_per_month: int = 3  # разборов per month on the free plan
     budget_per_situation_rub: float = 4.4  # hard cap on model spend for one разбор (estimated before each call)
@@ -36,6 +37,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "Наука побеждать <no-reply@example.com>"
     smtp_ssl: bool = True
+    mail_reply_to: str = ""  # a mailbox people read; empty = replies go to the From address
     mail_via_sendmail: bool = False  # true on shared hosting: use the local sendmail
     sendmail_path: str = "/usr/sbin/sendmail"
 
@@ -85,6 +87,10 @@ class Settings(BaseSettings):
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
     yookassa_vat_code: int = 1  # 1 = без НДС. У ОГИ ОСНО (есть филиал): если НДС не освобождён, нужна ставка 22% — код по справочнику ЮKassa
+
+    @property
+    def lifetime(self) -> set[str]:
+        return {e.strip().lower() for e in self.lifetime_emails.split(",") if e.strip()} | self.admins
 
     @property
     def admins(self) -> set[str]:
