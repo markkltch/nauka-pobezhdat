@@ -78,10 +78,20 @@
   @media (max-width: 639px) {
     #faq { padding: 24px 0 72px !important; }
     .qa { padding: 36px 20px 20px; border-radius: 24px; }
+    .qa::before { filter: none; }
     .qa__item summary { grid-template-columns: 32px 1fr 28px; padding: 20px 0; }
     .qa__icon { width: 28px; height: 28px; }
     .qa__a { padding: 0 0 22px 44px; } .qa__a p { font-size: 15.5px; }
   }
+  /* phone and tablet header: one solid band from the very top of the screen (its colour runs up under
+     the browser's own bar, where iOS Safari draws the page), out of the way while reading down, back
+     at once on the first move up; only transform moves, so scrolling stays smooth */
+  .nav::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 160px; background: var(--bg); pointer-events: none; }
+  @media (max-width: 1023px) {
+    .nav { transition: transform .28s cubic-bezier(.3,.7,.2,1); } /* no transform at rest: it would trap the full-screen menu */
+    .nav.nav--away:not(.is-open) { transform: translate3d(0, calc(-100% - 2px), 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .nav { transition: none; } }
 </style>
 <link rel="stylesheet" href="/static/landing/assets/ui/base.css">
 <link rel="stylesheet" href="/static/landing/assets/ui/window/fragment.css">
@@ -286,7 +296,7 @@
   <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text">
       <div class="hero__c">
-        <a class="pill" href="#method"><span>По методу А. В. Суворова</span><span class="muted">В браузере, на компьютере и телефоне</span></a>
+        <a class="pill" href="#method"><span>По методу А. В. Суворова</span></a>
         <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ-наставник для руководителей</h1>
         <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. {{ s.price_per_seat_rub|rub }} в месяц.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/register">Начать бесплатно</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
@@ -671,6 +681,24 @@
     btns[0].disabled = k <= 2; btns[1].disabled = k >= 50; };
   btns.forEach(b => b.addEventListener('click', () => { k = Math.min(50, Math.max(2, k + Number(b.dataset.shtabStep))); draw(); }));
   draw();
+})();
+</script>
+<script>
+(() => {
+  // the header steps out of the way while the page is read downwards and comes back on the first move up
+  const nav = document.querySelector('header.nav'); if (!nav) return;
+  const narrow = matchMedia('(max-width: 1023px)');
+  let last = scrollY, raf = 0;
+  const tick = () => {
+    raf = 0;
+    const y = Math.max(0, scrollY), d = y - last;
+    if (!narrow.matches || y < 80 || nav.classList.contains('is-open') || nav.contains(document.activeElement)) nav.classList.remove('nav--away');
+    else if (d > 6) nav.classList.add('nav--away');
+    else if (d < -6) nav.classList.remove('nav--away');
+    if (Math.abs(d) > 6 || y < 80) last = y;
+  };
+  addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
+  nav.addEventListener('focusin', () => nav.classList.remove('nav--away'));
 })();
 </script>
 </body>

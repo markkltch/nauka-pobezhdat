@@ -1,17 +1,42 @@
 {% extends "_card.html" %}
 {% block title %}Владельцу — {{ BRAND }}{% endblock %}
+{% block card_class %} solo__card--wide{% endblock %}
 {% block card %}
+{% set STATUS = {"succeeded": ("Оплачено", "ok"), "pending": ("Ждёт оплаты", "wait"), "canceled": ("Отменено", "off"), "refunded": ("Возврат", "off")} %}
 <h1>Сводка</h1>
+<div class="own-kpi">
+  <div><span>Выручка в этом месяце</span><b>{{ stats.revenue_month|money }}</b><small>покупок: {{ stats.buys_month }}</small></div>
+  <div><span>Расход на ИИ в этом месяце</span><b>{{ stats.cost_month|money }}</b><small>итог месяца: {{ stats.net_month|money }}</small></div>
+  <div><span>Активных подписок</span><b>{{ stats.subs_active }}</b><small>мест оплачено: {{ stats.seats_active }}</small></div>
+  <div><span>Выручка за всё время</span><b>{{ stats.revenue_total|money }}</b><small>только оплаченные</small></div>
+</div>
 <div class="bill">
   <p><span>Пользователей</span><b>{{ stats.users }}</b></p>
   <p><span>Ситуаций всего</span><b>{{ stats.situations }}</b></p>
   <p><span>Планов в этом месяце</span><b>{{ stats.plans_month }}</b></p>
   <p><span>Штабов</span><b>{{ stats.shtabs }}</b></p>
-  <p class="bill__total"><span>Расход на ИИ в этом месяце</span><b>{{ stats.cost_month }} ₽</b></p>
 </div>
-<h2>Расход по людям, этот месяц</h2>
+
+<h2>Покупки</h2>
+{% if buys %}
+<div class="table-scroll" role="region" aria-label="Покупки" tabindex="0">
+<table class="table table--buys">
+  <thead><tr><th scope="col">Дата</th><th scope="col">Покупатель</th><th scope="col">Что</th><th scope="col">Сумма</th><th scope="col">Статус</th></tr></thead>
+  <tbody>{% for b in buys %}{% set st = STATUS.get(b.status, (b.status, "wait")) %}
+    <tr><td>{{ b.at.strftime("%d.%m.%Y") }}</td><td>{{ b.email }}</td><td>{{ b.what }}</td><td>{{ b.rub|money }}</td><td><span class="own-st own-st--{{ st[1] }}">{{ st[0] }}</span></td></tr>
+  {% endfor %}</tbody>
+</table>
+</div>
+<ul class="buys" aria-label="Покупки">{% for b in buys %}{% set st = STATUS.get(b.status, (b.status, "wait")) %}
+  <li><b>{{ b.what }}</b><b class="buys__sum">{{ b.rub|money }}</b><span>{{ b.email }} · {{ b.at.strftime("%d.%m.%Y") }}</span><span class="own-st own-st--{{ st[1] }}">{{ st[0] }}</span></li>
+{% endfor %}</ul>
+{% else %}
+<p class="muted">Покупок пока нет. Здесь появятся подписки (на человека и на штаб) и пакеты разборов — с датой, суммой и статусом оплаты.</p>
+{% endif %}
+
+<h2>Расход на ИИ по людям, этот месяц</h2>
 <table class="table">
-  <thead><tr><th scope="col">Почта</th><th scope="col">Вызовов</th><th scope="col">₽</th></tr></thead>
-  <tbody>{% for email, calls, cost in rows %}<tr><td>{{ email }}</td><td>{{ calls }}</td><td>{{ '%.2f'|format(cost) }}</td></tr>{% else %}<tr><td colspan="3">Пока пусто</td></tr>{% endfor %}</tbody>
+  <thead><tr><th scope="col">Почта</th><th scope="col">Вызовов</th><th scope="col">Сумма</th></tr></thead>
+  <tbody>{% for email, calls, cost in rows %}<tr><td>{{ email }}</td><td>{{ calls }}</td><td>{{ cost|money }}</td></tr>{% else %}<tr><td colspan="3">Пока пусто</td></tr>{% endfor %}</tbody>
 </table>
 {% endblock %}

@@ -1,0 +1,8 @@
+{# phone top bar: the round actions on the right, like a mobile app's toolbar (hidden on wider screens) #}
+{% macro quick(here='', shtab_id=none) %}
+<nav class="quick" aria-label="Быстрые действия">
+  {% if shtab_id %}<a href="/shtab/{{ shtab_id }}" aria-label="Открыть штаб"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7.5" cy="7" r="2.8"/><circle cx="14" cy="8" r="2.1"/><path d="M2.5 16c.6-2.8 2.5-4.4 5-4.4s4.4 1.6 5 4.4M13 16c.4-1.9 1.4-3.1 2.8-3.1 1.2 0 2.2.8 2.7 2.4"/></svg></a>{% endif %}
+  {% if here != 'learn' %}<a href="/learn" aria-label="Учение"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 7.5 10 3.5l8 4-8 4zM5.5 9.3v4c1.2 1.1 2.7 1.7 4.5 1.7s3.3-.6 4.5-1.7v-4"/></svg></a>{% endif %}
+  {% if here != 'new' %}<a href="/app" aria-label="Новая ситуация"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M9 3.5H5A1.5 1.5 0 0 0 3.5 5v10A1.5 1.5 0 0 0 5 16.5h10a1.5 1.5 0 0 0 1.5-1.5v-4"/><path d="M14.2 3.3a1.6 1.6 0 0 1 2.3 2.3L10 12.1l-3 .8.8-3z"/></svg></a>{% endif %}
+</nav>
+{% endmacro %}

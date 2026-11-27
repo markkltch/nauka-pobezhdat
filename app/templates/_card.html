@@ -3,7 +3,7 @@
 {% block body %}
 <main class="solo">
   <a class="brand" href="/"><span class="mark" data-mark="arc" aria-hidden="true"></span><span>Наука побеждать<small>Штаб</small></span></a>
-  <div class="solo__card">
+  <div class="solo__card{% block card_class %}{% endblock %}">
     {% block card %}{% endblock %}
   </div>
   <footer class="legal-foot">

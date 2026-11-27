@@ -105,7 +105,19 @@ def test_limit_and_admin(client):
     assert r.headers["location"] == "/app?limit=1"
     assert "Разборы на этот месяц закончились" in client.get("/app").text
     page = client.get("/admin").text
-    assert "Расход на ИИ" in page
+    assert "Расход на ИИ" in page and "Покупок пока нет" in page
+    # purchases show up in the owner's summary: a paid subscription and a pending pack
+    from app.models import PackOrder, Payment, Subscription, User
+    with SessionLocal() as db:
+        boss = db.scalars(select(User).where(User.email == "boss@example.ru")).one()
+        sub = Subscription(payer_id=boss.id, seats=1, status="active")
+        db.add(sub); db.flush()
+        db.add(Payment(subscription_id=sub.id, provider_id="t-admin-1", amount_rub=1500, status="succeeded"))
+        db.add(PackOrder(user_id=boss.id, plans=5, amount_rub=990, status="pending"))
+        db.commit()
+    page = client.get("/admin").text
+    assert "Подписка · 1 место" in page and "Пакет разборов · 5 шт." in page
+    assert "1\u00a0500\u00a0₽" in page and "Оплачено" in page and "Ждёт оплаты" in page
     sign_in(client, "deputy@example.ru", level="line")
     assert client.get("/admin").status_code == 404
 

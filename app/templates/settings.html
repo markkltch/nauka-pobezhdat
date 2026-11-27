@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Настройки — {{ BRAND }}{% endblock %}
+{% from "_quick.html" import quick %}
 {% block body %}
 <div class="shell">
   {% include "_side.html" %}
@@ -7,6 +8,7 @@
     <header class="talk__head">
       <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
       <div class="talk__title"><h1>Настройки</h1><p>{{ user.email }}</p></div>
+      {{ quick() }}
     </header>
     <div class="page__body">
       {% set notes = {"saved": "Сохранено.", "pw_ok": "Пароль сохранён. На других устройствах нужно войти заново.",

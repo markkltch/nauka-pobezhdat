@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ current.title if current else "Новая ситуация" }} — {{ BRAND }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% from "_quick.html" import quick %}
 {% block body %}
 <a class="skip-link" href="#talk">К разговору</a>
 <div class="shell">
@@ -12,6 +13,7 @@
     <header class="talk__head">
       <button class="talk__menu" type="button" data-menu aria-controls="side" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg></button>
       <div class="talk__title"><h1>Новая ситуация</h1><p>Глазомер, быстрота, натиск — разбор по Суворову</p></div>
+      {{ quick("new") }}
     </header>
     <div class="feed">
       {% if request.query_params.get('err') %}<p class="error" role="alert">Наставник не ответил. Попробуйте ещё раз через минуту.</p>{% endif %}
@@ -56,6 +58,7 @@
         <p>Начато {{ current.created_at.date()|ru_date }}
           {% if current.review == 'done' %}<span class="chip chip--done">Итог подведён</span>{% elif current.stage == 'follow' %}<span class="chip chip--done">План готов</span>{% elif current.stage == 'plan' %}<span class="chip chip--late">Ждёт ваш ответ</span>{% endif %}</p>
       </div>
+      {{ quick("sit", plan_.sent_to_shtab_id if plan_ else none) }}
       {% if plan_ and plan_.sent_to_shtab_id %}<a class="btn btn--secondary talk__share" href="/shtab/{{ plan_.sent_to_shtab_id }}">Открыть штаб</a>{% endif %}
     </header>
 

@@ -543,3 +543,66 @@ a, button, summary, label, input, select, textarea { touch-action: manipulation;
   .invite .btn { flex: 1 1 100%; }
   .solo .seg-tabs { background: rgb(18 32 26 / .06); }
 }
+
+/* ---- owner's summary ---- */
+.solo__card--wide { max-width: 920px; }
+.own-kpi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); margin: var(--s-5) 0 var(--s-6); }
+.own-kpi > div { display: grid; gap: 6px; padding: var(--s-4) var(--s-5); border-radius: var(--r-md); background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.own-kpi span { font-size: 14px; color: var(--muted); }
+.own-kpi b { font: var(--display-weight) 30px/1.1 var(--font-display); letter-spacing: -0.02em; }
+.own-kpi small { font-size: 13px; color: var(--muted); }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll:focus-visible { outline: 2px solid var(--carmine); outline-offset: 4px; border-radius: 4px; }
+.table--buys { min-width: 640px; }
+.table--buys th, .table--buys td { padding-right: var(--s-4); vertical-align: top; }
+.table--buys td:not(:first-child), .table--buys th:not(:first-child) { text-align: left; }
+.table--buys td:nth-child(4), .table--buys th:nth-child(4) { text-align: right; white-space: nowrap; }
+.table--buys td:first-child { white-space: nowrap; color: var(--muted); }
+.table--buys td:last-child, .table--buys th:last-child { padding-right: 0; text-align: right; }
+.own-st { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; white-space: nowrap; }
+.own-st--ok { background: #dfe9dc; color: #1f4a2a; }
+.own-st--wait { background: #efe4cd; color: #6b5216; }
+.own-st--off { background: rgb(18 32 26 / .07); color: var(--muted); }
+.buys { display: none; }
+@media (max-width: 759px) {
+  .own-kpi { gap: var(--s-2); }
+  .own-kpi > div { padding: var(--s-3) var(--s-4); background: var(--surface); }
+  .own-kpi span, .own-kpi small { font-size: 12.5px; }
+  .own-kpi b { font-size: 22px; }
+  .table-scroll { display: none; }
+  .buys { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+  .buys li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px var(--s-3); align-items: center; padding: var(--s-3) var(--s-4);
+    border-radius: var(--r-md); background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+  .buys b { font-weight: 500; font-size: 15px; line-height: 1.35; }
+  .buys__sum { white-space: nowrap; justify-self: end; }
+  .buys .own-st { justify-self: end; }
+  .own-kpi > div { align-content: start; }
+  .buys span:not(.own-st) { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+}
+
+/* ---- phone top bar: a round menu button on the left, the title, a pill of actions on the right ----
+   The bar is one solid band from the very top of the screen: its colour runs up under the browser's
+   own bar (iOS Safari draws the page there), so no text ever shows above it. A hairline appears only
+   once the page has scrolled. */
+.quick { display: none; }
+@media (max-width: 759px) {
+  .talk__head { min-height: 60px; padding: max(10px, env(safe-area-inset-top)) var(--s-3) 10px !important; gap: var(--s-3);
+    border-bottom-color: transparent; transition: border-color .2s ease; transform: translateZ(0); }
+  .talk__head::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 160px; background: var(--bg); pointer-events: none; }
+  html.is-scrolled .talk__head { border-bottom-color: var(--line); }
+  .talk__menu { width: 40px; height: 40px; margin: 0; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgb(18 32 26 / .06); }
+  .talk__menu svg { width: 20px; height: 20px; }
+  .talk__title h1 { font: 500 17px/1.25 var(--font-text); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .talk__title p { display: none; }
+  .talk__head > .btn, .uc-head__review { display: none; }
+  .quick { display: flex; flex: none; align-items: center; padding: 2px; border-radius: 999px; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgb(18 32 26 / .06); }
+  .quick a { display: grid; place-items: center; width: 40px; height: 36px; border-radius: 999px; color: var(--ink); }
+  .quick a:active { background: rgb(18 32 26 / .06); }
+  .quick svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  /* the shtab's red head: the same pill in the crumbs row instead of a full-width button */
+  .shtab-head__new { display: none !important; }
+  .shtab-head .crumbs { justify-content: space-between; padding-top: env(safe-area-inset-top); }
+  .shtab-head .quick { background: rgb(255 253 248 / .14); box-shadow: inset 0 0 0 1px rgb(255 253 248 / .22); }
+  .shtab-head .quick a { color: #fffdf8; }
+  .shtab-head .quick a:active { background: rgb(255 253 248 / .12); }
+}

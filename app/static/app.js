@@ -107,6 +107,14 @@
     return out.buffer;
   }
 
+  // the phone top bar draws its hairline only once the page has scrolled
+  {
+    let raf = 0;
+    const mark = () => { raf = 0; document.documentElement.classList.toggle('is-scrolled', scrollY > 4); };
+    addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(mark); }, { passive: true });
+    mark();
+  }
+
   // phone: the side list opens as a drawer
   const side = document.querySelector('.side'), openers = document.querySelectorAll('[data-menu]');
   if (side && openers.length) {

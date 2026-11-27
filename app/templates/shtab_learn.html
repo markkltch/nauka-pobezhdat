@@ -2,11 +2,12 @@
 {% from "_uc.html" import ic %}
 {% block title %}Учение штаба «{{ shtab.name }}» — {{ BRAND }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="/static/learn.css?v=1">{% endblock %}
+{% from "_quick.html" import quick %}
 {% block body %}
 <a class="skip-link" href="#learn">К учению штаба</a>
 <header class="shtab-head">
   <div class="shtab-head__in">
-    <div class="crumbs"><a href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>К разговорам</a></div>
+    <div class="crumbs"><a href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>К разговорам</a>{{ quick() }}</div>
     <div class="shtab-head__row">
       <div>
         <h1>Штаб «{{ shtab.name }}»</h1>

@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 from . import access, auth, billing, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
-from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, Person, Plan,
-                     Shtab, Situation, Step, Usage, User, now)
+from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, PackOrder, Payment,
+                     Person, Plan, Shtab, Situation, Step, Subscription, Usage, User, now)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 HERE = Path(__file__).resolve().parent
@@ -62,6 +62,17 @@ templates.env.filters["plural"] = _plural
 templates.env.filters["initials"] = lambda name: "".join(w[0] for w in (name or "?").split()[:2]).upper() or "?"
 templates.env.filters["q"] = lambda t: t if str(t).startswith("«") else f"«{t}»"
 templates.env.filters["rub"] = lambda n: f"{int(n):,}".replace(",", "\u00a0") + "\u00a0₽"
+
+
+def _money(n) -> str:
+    """1 234,50 ₽ — kopecks only when there are any."""
+    n = round(float(n or 0), 2)
+    whole = f"{abs(int(n)):,}".replace(",", "\u00a0")
+    kop = round(abs(n) * 100) % 100
+    return ("−" if n < 0 else "") + whole + (f",{kop:02d}" if kop else "") + "\u00a0₽"
+
+
+templates.env.filters["money"] = _money
 
 
 @app.exception_handler(auth.LoginRequired)
@@ -874,14 +885,53 @@ def admin(request: Request, user: User = Depends(auth.require_admin), db: Sessio
         .join(Usage, Usage.user_id == User.id).where(Usage.created_at >= month)
         .group_by(User.email).order_by(func.sum(Usage.cost_rub).desc())
     ).all()
+    # every purchase, newest first: subscription payments (a person or a whole shtab) and packs of разборов
+    buys = []
+    for pay, sub, email, shtab in db.execute(
+        select(Payment, Subscription, User.email, Shtab.name)
+        .join(Subscription, Payment.subscription_id == Subscription.id)
+        .join(User, Subscription.payer_id == User.id)
+        .outerjoin(Shtab, Subscription.shtab_id == Shtab.id)
+        .order_by(Payment.created_at.desc()).limit(200)
+    ).all():
+        what = f"Подписка, штаб «{shtab}» · мест: {sub.seats}" if shtab else "Подписка · 1 место"
+        buys.append({"at": pay.created_at, "email": email, "what": what, "rub": pay.amount_rub, "status": pay.status})
+    for order, email in db.execute(
+        select(PackOrder, User.email).join(User, PackOrder.user_id == User.id)
+        .order_by(PackOrder.created_at.desc()).limit(200)
+    ).all():
+        buys.append({"at": order.created_at, "email": email, "what": f"Пакет разборов · {order.plans} шт.",
+                     "rub": order.amount_rub, "status": order.status})
+    buys.sort(key=lambda b: b["at"], reverse=True)
+    buys = buys[:200]
+
+    def paid(since=None):
+        total = 0.0
+        for model in (Payment, PackOrder):
+            q = select(func.coalesce(func.sum(model.amount_rub), 0)).where(model.status == "succeeded")
+            if since is not None:
+                q = q.where(model.created_at >= since)
+            total += db.scalar(q) or 0
+        return round(total, 2)
+
+    active = db.execute(select(func.count(Subscription.id), func.coalesce(func.sum(Subscription.seats), 0))
+                        .where(Subscription.status == "active", Subscription.paid_until > now())).one()
+    cost_month = round(db.scalar(select(func.coalesce(func.sum(Usage.cost_rub), 0)).where(Usage.created_at >= month)), 2)
+    revenue_month = paid(month)
     stats = {
         "users": db.scalar(select(func.count(User.id))),
         "situations": db.scalar(select(func.count(Situation.id))),
         "plans_month": db.scalar(select(func.count(Plan.id)).where(Plan.created_at >= month)),
-        "cost_month": round(db.scalar(select(func.coalesce(func.sum(Usage.cost_rub), 0)).where(Usage.created_at >= month)), 2),
+        "cost_month": cost_month,
         "shtabs": db.scalar(select(func.count(Shtab.id))),
+        "revenue_month": revenue_month,
+        "revenue_total": paid(),
+        "subs_active": active[0],
+        "seats_active": active[1],
+        "buys_month": sum(1 for b in buys if b["status"] == "succeeded" and b["at"] >= month),
+        "net_month": round(revenue_month - cost_month, 2),
     }
-    return page(request, "admin.html", user=user, stats=stats, rows=rows)
+    return page(request, "admin.html", user=user, stats=stats, rows=rows, buys=buys)
 
 
 # ---------- Учение ----------
