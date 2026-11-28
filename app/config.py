@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     # site
     base_url: str = "http://localhost:8000"
     secret_key: str = "change-me"
-    admin_emails: str = ""  # comma-separated
+    admin_emails: str = ""  # comma-separated: the owners; the panel is «Владелец» for them
+    staff_emails: str = ""  # comma-separated: see the same panel, named «Управление»
     database_url: str = "sqlite:///./dev.db"
     run_jobs_in_process: bool = True  # false on shared hosting: cron runs app.cron instead
 
@@ -93,8 +94,13 @@ class Settings(BaseSettings):
         return {e.strip().lower() for e in self.lifetime_emails.split(",") if e.strip()} | self.admins
 
     @property
-    def admins(self) -> set[str]:
+    def owners(self) -> set[str]:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
+    @property
+    def admins(self) -> set[str]:
+        """Everyone who sees the owner's panel: the owners and the staff."""
+        return self.owners | {e.strip().lower() for e in self.staff_emails.split(",") if e.strip()}
 
     @property
     def billing_enabled(self) -> bool:

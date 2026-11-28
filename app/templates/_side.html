@@ -25,7 +25,7 @@
     {% endfor %}
     <a href="/people" {% if request.url.path == '/people' %}aria-current="page"{% endif %}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10v9H3zM5.5 6.5h5M5.5 9h3"/></svg>Люди и уроки</a>
     <a href="/settings" {% if request.url.path == '/settings' %}aria-current="page"{% endif %}><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/></svg>Настройки</a>
-    {% if user.email in settings().admins %}<a href="/admin"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13V8M8 13V3M13 13V6"/></svg>Владелец</a>{% endif %}
+    {% if user.email in settings().admins %}<a href="/admin"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13V8M8 13V3M13 13V6"/></svg>{{ 'Владелец' if user.email in settings().owners else 'Управление' }}</a>{% endif %}
   </nav>
   <div class="me">
     <a class="me__who" href="/billing" aria-label="{{ user.display_name }}: {{ plan.tier_name|lower }} тариф{% if plan.lifetime %} навсегда{% endif %}. Тариф и оплата">

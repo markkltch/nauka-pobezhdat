@@ -297,3 +297,16 @@ def test_delete_and_rename_situation(client):
     sid2 = int(r.headers["location"].rsplit("/", 1)[1])
     r = client.post(f"/app/{sid2}/delete", data={"next": "/people"}, follow_redirects=False)
     assert r.headers["location"] == "/people"
+
+
+def test_staff_panel(client, monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "staff_emails", "helper@example.ru")
+    sign_in(client, "helper@example.ru")
+    page = client.get("/app").text
+    assert 'href="/admin"' in page and "Управление" in page and "Владелец" not in page
+    assert client.get("/admin").status_code == 200
+    assert "Полный · навсегда" in page  # the staff have the full plan, like the owners
+    sign_in(client, "boss@example.ru")
+    page = client.get("/app").text
+    assert "Владелец" in page and ">Управление<" not in page

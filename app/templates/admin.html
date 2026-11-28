@@ -1,5 +1,5 @@
 {% extends "_card.html" %}
-{% block title %}Владельцу — {{ BRAND }}{% endblock %}
+{% block title %}{{ 'Владельцу' if user.email in settings().owners else 'Управление' }} — {{ BRAND }}{% endblock %}
 {% block card_class %} solo__card--wide{% endblock %}
 {% block card %}
 {% set STATUS = {"succeeded": ("Оплачено", "ok"), "pending": ("Ждёт оплаты", "wait"), "canceled": ("Отменено", "off"), "refunded": ("Возврат", "off")} %}
