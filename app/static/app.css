@@ -920,3 +920,11 @@ button.kpi[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
 .shtab-edit:hover, .shtab-edit:focus-visible { opacity: 1; background: rgb(255 253 248 / .22); }
 .app-page .shtab-edit:focus-visible { outline: 2px solid #fffdf8; outline-offset: 2px; }
 @media (max-width: 759px) { .shtab-edit { width: 34px; height: 34px; margin-left: 8px; } .shtab-edit svg { width: 16px; height: 16px; } }
+
+/* the way back on card pages: a pill at the top left of the card */
+.solo__back { display: inline-flex; align-items: center; gap: 6px; height: 38px; margin: calc(-1 * var(--s-3)) 0 var(--s-5); padding: 0 16px 0 10px;
+  border-radius: 99px; background: rgb(18 32 26 / .07); font: 500 15px/1 var(--font-text); color: var(--ink);
+  text-decoration: none; transition: background-color .15s ease; }
+.solo__back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.solo__back:hover { background: rgb(18 32 26 / .12); }
+@media (max-width: 759px) { .solo__back { margin-top: 0; } }

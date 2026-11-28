@@ -1,7 +1,9 @@
 {% extends "_card.html" %}
+{% from "_back.html" import back %}
 {% block title %}{{ 'Владельцу' if user.email in settings().owners else 'Управление' }} — {{ BRAND }}{% endblock %}
 {% block card_class %} solo__card--wide{% endblock %}
 {% block card %}
+{{ back() }}
 {% set STATUS = {"succeeded": ("Оплачено", "ok"), "pending": ("Ждёт оплаты", "wait"), "canceled": ("Отменено", "off"), "refunded": ("Возврат", "off")} %}
 <h1>Сводка</h1>
 <div class="own-kpi">

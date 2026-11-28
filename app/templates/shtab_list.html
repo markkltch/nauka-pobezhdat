@@ -1,6 +1,8 @@
 {% extends "_card.html" %}
+{% from "_back.html" import back %}
 {% block title %}Штаб — {{ BRAND }}{% endblock %}
 {% block card %}
+{{ back() }}
 {% if shtabs %}
 <h1>Ваши штабы</h1>
 <ul class="people">{% for sh in shtabs %}<li><a class="link-u" href="/shtab/{{ sh.id }}">Штаб «{{ sh.name }}»</a> · {{ sh.members|length }} чел.</li>{% endfor %}</ul>
@@ -16,5 +18,4 @@
   <input id="about" name="about" placeholder="Например, запуск второй линии к 15 декабря">
   <button class="btn btn--primary" type="submit">Создать штаб</button>
 </form>
-<p class="small"><a class="link-u" href="/app">К разговорам</a></p>
 {% endblock %}

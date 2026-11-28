@@ -1,7 +1,9 @@
 {% extends "_card.html" %}
+{% from "_back.html" import back %}
 {% block title %}Тариф — {{ BRAND }}{% endblock %}
 {% block card_class %} solo__card--billing{% endblock %}
 {% block card %}
+{{ back() }}
 <h1>Тариф</h1>
 <p class="muted">Сейчас у вас <b>{{ plan.tier_name|lower }}</b>: {{ plan.used }} из {{ plan.allowance }} разборов в этом месяце{% if plan.extra %}, ещё {{ plan.extra }} в запасе{% endif %}.{% if plan.lifetime %} Полный доступ открыт для вас навсегда, оплачивать его не нужно.{% elif settings().free_beta %} Идёт закрытый запуск: полный доступ открыт без оплаты.{% endif %}</p>
 {% if payment_error %}<p role="alert">Платёжная форма временно недоступна. Попробуйте ещё раз позже.</p>{% endif %}
