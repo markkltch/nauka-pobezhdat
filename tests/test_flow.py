@@ -243,3 +243,57 @@ def test_lifetime_access(monkeypatch):
         assert access.tier(db, User(email="friend@example.ru")) == access.PRO
         assert access.tier(db, User(email="boss@example.ru")) == access.PRO  # owners too
         assert access.tier(db, User(email="someone@example.ru")) == access.FREE
+
+
+def test_delete_and_rename_situation(client):
+    from app import access
+    from app.models import Message, Plan, Situation, User
+    sign_in(client, "deleter@example.ru")
+    r = client.post("/app/new", data={"text": "Двое в смене опаздывают"}, follow_redirects=False)
+    sid = int(r.headers["location"].rsplit("/", 1)[1])
+    client.post(f"/app/{sid}/say", data={"text": "Одни и те же, говорил один раз"})
+    r = client.post("/shtab/new", data={"name": "Склад"}, follow_redirects=False)
+    shtab_id = int(r.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/app/{sid}").text
+    assert 'data-sit-menu="%d"' % sid in page and 'data-shtab="1"' not in page
+    pid = int(re.search(r"/plans/(\d+)/send", page).group(1))
+    client.post(f"/plans/{pid}/send", data={"shtab_id": shtab_id})
+    assert 'data-shtab="1"' in client.get(f"/app/{sid}").text
+
+    # rename: trimmed, empty ignored, back where it was asked
+    r = client.post(f"/app/{sid}/rename", data={"title": "  Опоздания   на складе ", "next": f"/app/{sid}"}, follow_redirects=False)
+    assert r.headers["location"] == f"/app/{sid}"
+    assert "Опоздания на складе" in client.get(f"/app/{sid}").text
+    client.post(f"/app/{sid}/rename", data={"title": "   "})
+    assert "Опоздания на складе" in client.get(f"/app/{sid}").text
+
+    with SessionLocal() as db:
+        user = db.scalars(select(User).where(User.email == "deleter@example.ru")).one()
+        used = access.used_this_month(db, user)
+
+    # a stranger can neither rename nor delete it
+    sign_in(client, "outsider@example.ru")
+    assert client.post(f"/app/{sid}/delete").status_code == 404
+    assert client.post(f"/app/{sid}/rename", data={"title": "x"}).status_code == 404
+
+    sign_in(client, "deleter@example.ru")
+    r = client.post(f"/app/{sid}/delete", data={"next": f"/app/{sid}"}, follow_redirects=False)
+    assert r.headers["location"] == "/app?deleted=1"
+    assert "Разбор удалён" in client.get("/app?deleted=1").text
+    assert client.get(f"/app/{sid}").status_code == 404
+    assert "Опоздания на складе" not in client.get("/app").text
+    with SessionLocal() as db:
+        sit = db.get(Situation, sid)
+        assert sit.deleted_at and sit.title == "Удалённый разбор"
+        assert not db.scalars(select(Message).where(Message.situation_id == sid)).all()
+        assert not db.scalars(select(Plan).where(Plan.situation_id == sid)).all()
+        kept = db.scalars(select(Step).where(Step.shtab_id == shtab_id)).all()
+        assert kept and all(s.plan_id is None for s in kept)  # the team keeps its tasks
+        user = db.scalars(select(User).where(User.email == "deleter@example.ru")).one()
+        assert access.used_this_month(db, user) == used  # deleting does not give a разбор back
+    assert "Поговорите с каждым один на один" in client.get(f"/shtab/{shtab_id}").text
+    # deleting from another page returns there
+    r = client.post("/app/new", data={"text": "Сотрудник просит повышения"}, follow_redirects=False)
+    sid2 = int(r.headers["location"].rsplit("/", 1)[1])
+    r = client.post(f"/app/{sid2}/delete", data={"next": "/people"}, follow_redirects=False)
+    assert r.headers["location"] == "/people"

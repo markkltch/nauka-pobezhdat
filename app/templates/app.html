@@ -2,6 +2,7 @@
 {% block title %}{{ current.title if current else "Новая ситуация" }} — {{ BRAND }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="/static/learn.css?v=3">{% endblock %}
 {% from "_quick.html" import quick %}
+{% from "_sit_menu.html" import sit_more %}
 {% block body %}
 <a class="skip-link" href="#talk">К разговору</a>
 <div class="shell">
@@ -16,6 +17,7 @@
       {{ quick("new") }}
     </header>
     <div class="feed">
+      {% if request.query_params.get('deleted') %}<p class="flash" role="status" data-flash>Разбор удалён.</p>{% endif %}
       {% if request.query_params.get('err') %}<p class="error" role="alert">Наставник не ответил. Попробуйте ещё раз через минуту.</p>{% endif %}
       {% if request.query_params.get('ferr') %}<p class="error" role="alert">{{ request.query_params.get('ferr') }}</p>{% endif %}
       {% if limit %}
@@ -60,6 +62,7 @@
       </div>
       {{ quick("sit", plan_.sent_to_shtab_id if plan_ else none) }}
       {% if plan_ and plan_.sent_to_shtab_id %}<a class="btn btn--secondary talk__share" href="/shtab/{{ plan_.sent_to_shtab_id }}">Открыть штаб</a>{% endif %}
+      {{ sit_more(current, "talk__more") }}
     </header>
 
     <div class="feed">

@@ -13,13 +13,13 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from . import access, auth, billing, emails, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
-from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, PackOrder, Payment,
+from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, Message, PackOrder, Payment,
                      Person, Plan, Shtab, Situation, Step, Subscription, Usage, User, now)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -480,7 +480,8 @@ def lesson_delete(lid: int, user: User = Depends(auth.require_user), db: Session
 # ---------- the mentor ----------
 
 def _sidebar(db: Session, user: User) -> dict:
-    situations = db.scalars(select(Situation).where(Situation.user_id == user.id).order_by(Situation.updated_at.desc())).all()
+    situations = db.scalars(select(Situation).where(Situation.user_id == user.id, Situation.deleted_at.is_(None))
+                            .order_by(Situation.updated_at.desc())).all()
     shtabs = my_shtabs(db, user)
     return {"situations": situations, "shtabs": shtabs, "plan": access.summary(db, user),
             "learn_count": learn.done_count(db, user), "learn_total": learn.course()["total"]}
@@ -507,9 +508,61 @@ def app_home(request: Request, user: User = Depends(auth.require_user), db: Sess
 
 def _own_situation(db: Session, user: User, sid: int) -> Situation:
     sit = db.get(Situation, sid)
-    if not sit or sit.user_id != user.id:
+    if not sit or sit.user_id != user.id or sit.deleted_at:
         raise HTTPException(404)
     return sit
+
+
+def _forget(db: Session, sit: Situation) -> None:
+    """Delete a разбор for its author: the messages, the plan and its steps go. Steps already sent to a shtab stay
+    with the team as plain tasks; lessons stay in «Люди и уроки». The row itself stays, emptied, so the month's
+    count of разборы does not go down."""
+    quiet = {"synchronize_session": False}
+    plan_ids = db.scalars(select(Plan.id).where(Plan.situation_id == sit.id)).all()
+    if plan_ids:
+        db.execute(update(Step).where(Step.plan_id.in_(plan_ids), Step.shtab_id.is_not(None)).values(plan_id=None)
+                   .execution_options(**quiet))
+        step_ids = db.scalars(select(Step.id).where(Step.plan_id.in_(plan_ids))).all()
+        if step_ids:
+            db.execute(update(LearnOrder).where(LearnOrder.step_id.in_(step_ids)).values(step_id=None)
+                       .execution_options(**quiet))
+            db.execute(delete(Step).where(Step.id.in_(step_ids)).execution_options(**quiet))
+        db.execute(delete(Plan).where(Plan.id.in_(plan_ids)).execution_options(**quiet))
+    db.execute(delete(Message).where(Message.situation_id == sit.id).execution_options(**quiet))
+    db.execute(update(Lesson).where(Lesson.situation_id == sit.id).values(situation_id=None).execution_options(**quiet))
+    db.execute(update(Situation).where(Situation.id == sit.id)
+               .values(title="Удалённый разбор", stage="deleted", review="done", deleted_at=now())
+               .execution_options(**quiet))
+    db.commit()
+    db.expire_all()
+
+
+def _back(next_url: str, sid: int, flash: str) -> RedirectResponse:
+    """Where to go after renaming or deleting from the menu: back to the page it was opened on,
+    or to a new situation when that page was the deleted разбор itself."""
+    dest = safe_next(next_url) if next_url else f"/app/{sid}"
+    path = dest.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    if flash == "deleted" and path in (f"/app/{sid}", "/app"):
+        return see_other("/app?deleted=1")
+    return see_other(dest)
+
+
+@app.post("/app/{sid}/rename")
+def app_rename(sid: int, title: str = Form(""), next: str = Form(""),
+               user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    sit = _own_situation(db, user, sid)
+    clean = " ".join(title.split())[:160]
+    if clean:
+        sit.title = clean
+        db.commit()
+    return _back(next, sid, "renamed")
+
+
+@app.post("/app/{sid}/delete")
+def app_delete(sid: int, next: str = Form(""), user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    sit = _own_situation(db, user, sid)
+    _forget(db, sit)
+    return _back(next, sid, "deleted")
 
 
 async def _read_upload(upload: UploadFile | None) -> tuple[str, str] | None:

@@ -90,6 +90,8 @@ class Situation(Base):
     review: Mapped[str] = mapped_column(String(12), default="", server_default="")  # "" | due | done
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=now)
+    # deleted by its author: the conversation and the plan are gone, the row stays so the month's count holds
+    deleted_at: Mapped[dt.datetime | None] = mapped_column(DateTime)
     messages: Mapped[list[Message]] = relationship(order_by="Message.id", cascade="all, delete-orphan")
     plans: Mapped[list[Plan]] = relationship(order_by="Plan.id", cascade="all, delete-orphan")
 

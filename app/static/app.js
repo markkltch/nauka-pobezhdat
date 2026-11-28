@@ -151,6 +151,99 @@
     t.value = b.dataset.example; t.dispatchEvent(new Event('input')); t.focus();
   }));
 
+  // a разбор's menu: ⋯ opens «Переименовать» and «Удалить»; each opens a dialog that posts to the server
+  const I = {
+    pen: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.6 2.6l2.8 2.8-7.9 7.9H2.7v-2.8z"/><path d="M9.2 4l2.8 2.8"/></svg>',
+    bin: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.8 4.3h10.4M6.3 4.3V2.8h3.4v1.5M4.2 4.3l.7 9h6.2l.7-9M6.7 6.8v4.2M9.3 6.8v4.2"/></svg>',
+    team: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3"/><path d="M2 13c.5-2.3 2-3.6 4-3.6s3.5 1.3 4 3.6M11 4.5a2 2 0 010 4M12.5 13c-.2-1.4-.8-2.4-1.7-3"/></svg>',
+    count: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.7"/><path d="M8 5v3.2l2 1.3"/></svg>'
+  };
+  const here = () => location.pathname + location.search;
+  let pop = null, popFor = null;
+  const closePop = (back) => {
+    if (!pop) return;
+    pop.remove(); pop = null;
+    if (popFor) { popFor.setAttribute('aria-expanded', 'false'); if (back) popFor.focus(); }
+    popFor = null;
+  };
+  function dialog(build) {
+    const d = document.createElement('dialog'); d.className = 'dlg';
+    const f = document.createElement('form'); f.method = 'post'; d.append(f);
+    build(f, () => d.close());
+    d.addEventListener('close', () => { d.remove(); popFor?.focus(); });
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });   // a click on the backdrop
+    document.body.append(d); d.showModal();
+    return d;
+  }
+  function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html) n.innerHTML = html; return n; }
+  function acts(f, close, okText) {
+    const row = el('div', 'dlg__acts');
+    const no = el('button', 'btn btn--secondary'); no.type = 'button'; no.textContent = 'Отмена'; no.addEventListener('click', close);
+    const ok = el('button', 'btn btn--primary'); ok.type = 'submit'; ok.textContent = okText;
+    row.append(no, ok); f.append(row);
+    const next = el('input'); next.type = 'hidden'; next.name = 'next'; next.value = here(); f.append(next);
+    return ok;
+  }
+  function askRename(b) {
+    const sid = b.dataset.sitMenu;
+    dialog((f, close) => {
+      f.action = `/app/${sid}/rename`;
+      const h = el('h2'); h.textContent = 'Переименовать разбор'; f.append(h);
+      const label = el('label'); label.className = 'sr-only'; label.textContent = 'Название'; label.htmlFor = 'dlg-title';
+      const i = el('input'); i.type = 'text'; i.name = 'title'; i.id = 'dlg-title'; i.maxLength = 160; i.required = true; i.value = b.dataset.title;
+      f.append(label, i);
+      acts(f, close, 'Сохранить');
+      setTimeout(() => { i.focus(); i.select(); });
+    });
+  }
+  function askDelete(b) {
+    const sid = b.dataset.sitMenu;
+    dialog((f, close) => {
+      f.action = `/app/${sid}/delete`;
+      const h = el('h2'); h.textContent = 'Удалить разбор?'; f.append(h);
+      const p = el('p'), t = el('b'); t.textContent = `«${b.dataset.title}»`;
+      p.append(t, document.createTextNode(' исчезнет вместе с перепиской и планом. Вернуть его будет нельзя.')); f.append(p);
+      if (b.dataset.shtab) { const n = el('p', 'dlg__note', I.team); n.append(document.createTextNode('Задачи, которые вы отправили в штаб, останутся у команды.')); f.append(n); }
+      const c = el('p', 'dlg__note', I.count); c.append(document.createTextNode('Разбор останется в счётчике этого месяца.')); f.append(c);
+      const ok = acts(f, close, 'Удалить');
+      setTimeout(() => ok.focus());
+    });
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-sit-menu]');
+    if (!b) { if (pop && !pop.contains(e.target)) closePop(); return; }
+    e.preventDefault();
+    if (popFor === b) { closePop(); return; }
+    closePop();
+    pop = el('div', 'pop'); pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', 'Действия с разбором');
+    const rn = el('button', '', I.pen + '<span>Переименовать</span>'), del = el('button', 'pop__danger', I.bin + '<span>Удалить</span>');
+    [rn, del].forEach(x => { x.type = 'button'; x.setAttribute('role', 'menuitem'); });
+    rn.addEventListener('click', () => { closePop(); askRename(b); });
+    del.addEventListener('click', () => { closePop(); askDelete(b); });
+    pop.append(rn, del); document.body.append(pop);
+    popFor = b; b.setAttribute('aria-expanded', 'true');
+    const r = b.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    pop.style.top = `${top}px`; pop.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
+    rn.focus();
+  });
+  document.addEventListener('keydown', e => {
+    if (!pop) return;
+    const items = [...pop.querySelectorAll('button')], i = items.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePop(true); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+    else if (e.key === 'Tab') closePop();
+  }, true);
+  addEventListener('resize', () => closePop());
+  document.querySelector('.side')?.addEventListener('scroll', () => closePop(), { passive: true });
+
+  // «Разбор удалён»: say it once, then take the mark out of the address
+  const flash = document.querySelector('[data-flash]');
+  if (flash) {
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 450); }, 4000);
+  }
+
   // keep the conversation at its end after an answer
   if (location.hash === '#end') document.getElementById('end')?.scrollIntoView({ block: 'end' });
 })();
