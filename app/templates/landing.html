@@ -157,6 +157,100 @@
     .app > .app__pane + .app__pane { border-top: 0; }
   }
 
+  /* ---- «Учение»: the campaign map — nine stages as a march across a field map, a lesson and an order pinned on it ---- */
+  #learn .camp-grid { align-items: center; }
+  #learn h2 { hyphens: manual; text-wrap: balance; }
+  #learn .camp-label { color: var(--action); }
+  #learn .camp-stats { display: flex; gap: 40px; margin: 4px 0; padding: 18px 0; border-block: 1px solid var(--line); }
+  #learn .camp-stats div { display: grid; gap: 2px; }
+  #learn .camp-stats dt { font: var(--display-weight) var(--t-stat)/1 var(--font-display); letter-spacing: -.03em; color: var(--action); }
+  #learn .camp-stats dd { margin: 0; font-size: var(--t-small); color: var(--muted); }
+  #learn .camp-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  #learn .camp-cta .muted { font-size: var(--t-small); }
+  .camp { position: relative; margin: 0; aspect-ratio: 720 / 520; border-radius: 24px; overflow: hidden;
+    background: radial-gradient(120% 90% at 80% 10%, #213429 0%, #12201a 62%), #12201a; color: #f4eee2;
+    box-shadow: 0 40px 80px -40px rgb(18 32 26 / .55), inset 0 0 0 1px rgb(244 238 226 / .06); }
+  .camp__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .camp__topo path, .camp__topo ellipse { fill: none; stroke: rgb(244 238 226 / .07); stroke-width: 1.2; }
+  .camp__road { fill: none; stroke: rgb(244 238 226 / .32); stroke-width: 2.5; stroke-dasharray: 2 9; stroke-linecap: round; }
+  .camp__done { fill: none; stroke: #a8142f; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+  .camp__node circle { fill: #1f2c25; stroke: rgb(244 238 226 / .35); stroke-width: 1.5; }
+  .camp__node text { fill: rgb(244 238 226 / .75); font: 600 13px/1 var(--font-text); text-anchor: middle; }
+  .camp__node.is-done circle { fill: #a8142f; stroke: #a8142f; }
+  .camp__tick, .camp__flag { fill: none; stroke: #fffdf8; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .camp__node.is-now circle { fill: #e9cf97; stroke: #e9cf97; }
+  .camp__node.is-now text { fill: #12201a; font-size: 15px; }
+  .camp__pulse { fill: none !important; stroke: #e9cf97 !important; stroke-width: 2 !important; transform-box: fill-box; transform-origin: center; animation: camp-pulse 2.4s var(--ease) infinite; }
+  .camp__node.is-goal circle { fill: transparent; stroke: #e9cf97; stroke-dasharray: 4 4; }
+  .camp__node.is-goal .camp__flag { stroke: #e9cf97; stroke-width: 2; }
+  .camp__labels text { fill: rgb(244 238 226 / .8); font: 500 14px/1 var(--font-text); }
+  .camp__labels text.is-now { fill: #e9cf97; font-weight: 600; }
+  .camp__ranks rect { fill: rgb(244 238 226 / .08); stroke: rgb(244 238 226 / .18); }
+  .camp__ranks text { fill: rgb(244 238 226 / .7); font: 600 11px/1 var(--font-text); letter-spacing: .08em; text-transform: uppercase; text-anchor: middle; }
+  .camp__here rect { fill: #e9cf97; stroke: none; }
+  .camp__here text { fill: #12201a; }
+  .camp { container-type: inline-size; }
+  .camp__card { position: absolute; font-size: clamp(10px, 1.78cqw, 14px); padding: 1.1em 1.25em; border-radius: 1.25em; background: #fffdf8; color: #12201a;
+    box-shadow: 0 24px 48px -20px rgb(0 0 0 / .6), 0 0 0 1px rgb(18 32 26 / .06); font-family: var(--font-text); }
+  .camp__card p { margin: 0; }
+  .camp__kick { font: 600 .8em/1.2 var(--font-text) !important; letter-spacing: .1em; text-transform: uppercase; color: #a8142f; margin-bottom: .65em !important; }
+  .camp__lesson { right: 3%; bottom: 4.5%; width: 43%; }
+  .camp__q { font: 500 1.04em/1.35 var(--font-text); margin-bottom: .75em !important; }
+  .camp__opt { display: flex; gap: 8px; align-items: flex-start; padding: .6em .8em; border-radius: .8em; border: 1px solid rgb(18 32 26 / .14); font-size: .96em; line-height: 1.35; color: #46463e; margin-bottom: .45em !important; }
+  .camp__opt.is-right { border-color: #23452f; background: #e6efe3; color: #12201a; box-shadow: inset 0 0 0 1px #23452f; }
+  .camp__ok { flex: none; width: 1.25em; height: 1.25em; margin-top: .05em; border-radius: 50%; background: #23452f;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.3l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+  .camp__verdict { display: flex; justify-content: space-between; font: 600 1em/1 var(--font-text); color: #23452f; margin-top: .65em !important; }
+  .camp__verdict span { color: #a8142f; }
+  .camp__order { left: 3%; top: 4.5%; width: 32%; transform: rotate(-1.5deg); background: #f4eee2; }
+  .camp__order-text { font: 400 1em/1.4 var(--font-text); }
+  .camp__order-text b { color: #a8142f; font-weight: 600; }
+  .camp__order-foot { display: flex; align-items: center; gap: 8px; margin-top: .75em !important; font-size: .92em; color: #46463e; }
+  .camp__box { width: 1.1em; height: 1.1em; border-radius: .3em; border: 1.5px solid rgb(18 32 26 / .4); }
+  .camp__mobile { display: none; }
+  @keyframes camp-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(2.1); opacity: 0; } }
+
+  /* the march draws itself once the map comes into view */
+  .camp.is-armed .camp__done { stroke-dashoffset: 1; transition: stroke-dashoffset 1.6s var(--ease) .3s; }
+  .camp.is-armed .camp__node, .camp.is-armed .camp__labels text, .camp.is-armed .camp__ranks g { opacity: 0; transition: opacity .5s var(--ease); }
+  .camp.is-armed .camp__card { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
+  .camp.is-armed .camp__order { transform: translateY(18px) rotate(-1.5deg); }
+  .camp.is-in .camp__done { stroke-dashoffset: 0; }
+  .camp.is-in .camp__node, .camp.is-in .camp__labels text, .camp.is-in .camp__ranks g { opacity: 1; }
+  .camp.is-in .camp__node { transition-delay: calc(.15s + var(--i) * .12s); }
+  .camp.is-in .camp__labels text { transition-delay: .9s; }
+  .camp.is-in .camp__ranks g { transition-delay: 1.4s; }
+  .camp.is-in .camp__card { opacity: 1; transform: none; }
+  .camp.is-in .camp__lesson { transition-delay: 1.1s; }
+  .camp.is-in .camp__order { transform: rotate(-1.5deg); transition-delay: 1.5s; }
+  @media (prefers-reduced-motion: reduce) { .camp__pulse { animation: none; } .camp.is-armed * { transition: none !important; } }
+
+  /* tablet: the map under the words */
+  @media (max-width: 1023px) {
+    #learn .camp-copy, #learn .camp-map-col { grid-column: 1 / -1; }
+    #learn .camp-map-col { margin-top: 40px; }
+  }
+  /* phone: the march as a column, the lesson card under it */
+  @media (max-width: 639px) {
+    .camp { aspect-ratio: auto; padding: 20px 16px 16px; display: flex; flex-direction: column; }
+    .camp__mobile { order: 1; } .camp__lesson { order: 2; font-size: 14px; }
+    .camp__svg, .camp__order { display: none; }
+    .camp__mobile { display: block; }
+    .camp-list { list-style: none; margin: 0 0 20px; padding: 0 0 0 4px; display: grid; gap: 0; position: relative; }
+    .camp-list::before { content: ""; position: absolute; left: 17px; top: 14px; bottom: 14px; border-left: 2px dashed rgb(244 238 226 / .25); }
+    .camp-list li { position: relative; display: flex; align-items: center; gap: 12px; padding: 6px 0; font: 500 15px/1.3 var(--font-text); color: rgb(244 238 226 / .8); }
+    .camp-list b { position: relative; z-index: 1; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+      background: #1f2c25; box-shadow: inset 0 0 0 1.5px rgb(244 238 226 / .35); font: 600 12px/1 var(--font-text); }
+    .camp-list li.is-done b { background: #a8142f; box-shadow: none; }
+    .camp-list li.is-now { color: #e9cf97; font-weight: 600; }
+    .camp-list li.is-now b { background: #e9cf97; color: #12201a; box-shadow: 0 0 0 5px rgb(233 207 151 / .2); }
+    .camp-list li.is-goal b { background: transparent; box-shadow: inset 0 0 0 1.5px #e9cf97; color: #e9cf97; }
+    .camp-list span { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: rgb(244 238 226 / .1); font: 600 10.5px/1.3 var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: rgb(244 238 226 / .75); }
+    .camp-list li.is-now span { background: #e9cf97; color: #12201a; }
+    .camp__lesson { position: relative; inset: auto; width: auto; }
+    #learn .camp-stats { gap: 24px; }
+  }
+
   /* the steps: one panel height for the group */
   #how .panel { --p-h: 336px; }
   @media (max-width: 639px) { #how .panel { --p-h: 200px; } }
@@ -263,6 +357,7 @@
               <p class="t-label">Команда</p>
               <a href="#shtab">Штаб<span>Общие задачи и сроки</span></a>
               <a href="#method">Метод<span>Глазомер, быстрота, натиск</span></a>
+              <a href="#learn">Учение<span>Пять минут в день</span></a>
             </div>
             <a class="menu-card span-3 start-10" href="#shtab">
               <div class="panel"><div class="stage stage--fade-br"><div class="at-corner" style="--ax:24px;--ay:24px">
@@ -278,6 +373,7 @@
           </div>
         </div>
       </div>
+      <div class="nav__item"><a class="nav__link" href="#learn">Учение</a></div>
       <div class="nav__item"><a class="nav__link" href="#shtab">Штаб</a></div>
       <div class="nav__item"><a class="nav__link" href="#price">Цена</a></div>
       <div class="nav__item"><a class="nav__link" href="#faq">FAQ</a></div>
@@ -477,6 +573,97 @@
     </div>
   </section>
 
+  <section class="section" id="learn" aria-labelledby="learn-h">
+    <div class="wrap">
+      <div class="grid camp-grid">
+        <div class="span-5 stack-4 camp-copy">
+          <p class="t-label camp-label">Учение</p>
+          <h2 id="learn-h">Пять минут в день — и правила Суворова становятся привычкой</h2>
+          <p class="t-lead">Разбор помогает решить ситуацию. «Учение» — научиться решать такие ситуации самому: девять этапов по «Науке побеждать», от ясной цели до полной победы.</p>
+          <dl class="camp-stats">
+            <div><dt>9</dt><dd>этапов</dd></div>
+            <div><dt>27</dt><dd>уроков</dd></div>
+            <div><dt>5</dt><dd>минут на урок</dd></div>
+          </dl>
+          <ul class="ticks">
+            <li>Упражнения на живых рабочих ситуациях, а не тест на память</li>
+            <li>Приказ на неделю: правило сразу идёт в ваше дело</li>
+            <li>Чины от рекрута до генерала и боевой ряд по рабочим дням</li>
+            <li>Глава штаба назначает команде этап и видит прогресс</li>
+          </ul>
+          <p class="camp-cta"><a class="btn btn--primary" href="/register">Пройти вступительный смотр</a><span class="muted">Первые два этапа — бесплатно</span></p>
+        </div>
+
+        <div class="span-7 camp-map-col">
+          <figure class="camp" data-camp aria-label="Путь «Учения»: девять этапов от рекрута до генерала">
+            <svg class="camp__svg" viewBox="0 0 720 520" aria-hidden="true">
+              <g class="camp__topo">
+                <path d="M-20 140C80 110 150 170 250 140S420 60 520 90 680 40 760 70"/>
+                <path d="M-20 200C90 175 170 230 270 200S430 125 540 150 690 105 760 130"/>
+                <path d="M-20 330C70 300 160 350 250 320S400 380 520 350 680 300 760 320"/>
+                <path d="M-20 400C80 380 170 430 280 400S440 450 560 420 690 380 760 400"/>
+                <path d="M-20 470C100 450 200 500 320 470S480 520 600 490 700 470 760 480"/>
+                <ellipse cx="560" cy="380" rx="120" ry="70"/><ellipse cx="560" cy="380" rx="78" ry="42"/><ellipse cx="560" cy="380" rx="38" ry="18"/>
+                <ellipse cx="150" cy="120" rx="96" ry="52"/><ellipse cx="150" cy="120" rx="54" ry="26"/>
+              </g>
+              <path class="camp__road" d="M70 462 C86 452 160 430 168 404 C176 378 107 332 118 306 C129 280 198 248 236 246 C274 244 311 299 344 292 C377 285 424 234 432 206 C440 178 380 146 394 126 C408 106 475 96 516 86 C557 76 619 69 640 66"/>
+              <path class="camp__done" pathLength="1" d="M70 462 C86 452 160 430 168 404 C176 378 107 332 118 306"/>
+              <g class="camp__nodes">
+                <g class="camp__node is-done" style="--i:0" transform="translate(70 462)"><circle r="15"/><path class="camp__tick" d="M-6 0.5l4 4 8-8.5"/></g>
+                <g class="camp__node is-done" style="--i:1" transform="translate(168 404)"><circle r="15"/><path class="camp__tick" d="M-6 0.5l4 4 8-8.5"/></g>
+                <g class="camp__node is-now" style="--i:2" transform="translate(118 306)"><circle class="camp__pulse" r="15"/><circle r="17"/><text y="5">3</text></g>
+                <g class="camp__node" style="--i:3" transform="translate(236 246)"><circle r="15"/><text y="5">4</text></g>
+                <g class="camp__node" style="--i:4" transform="translate(344 292)"><circle r="15"/><text y="5">5</text></g>
+                <g class="camp__node" style="--i:5" transform="translate(432 206)"><circle r="15"/><text y="5">6</text></g>
+                <g class="camp__node" style="--i:6" transform="translate(394 126)"><circle r="15"/><text y="5">7</text></g>
+                <g class="camp__node" style="--i:7" transform="translate(516 86)"><circle r="15"/><text y="5">8</text></g>
+                <g class="camp__node is-goal" style="--i:8" transform="translate(640 66)"><circle r="17"/><path class="camp__flag" d="M-4 8V-9M-4 -9h10l-3 4 3 4h-10"/></g>
+              </g>
+              <g class="camp__labels">
+                <text x="94" y="467">Учение</text>
+                <text x="192" y="409">Ясная цель</text>
+                <text x="94" y="311" text-anchor="end" class="is-now">Глазомер</text>
+                <text x="236" y="219" text-anchor="middle">Постановка задач</text>
+                <text x="344" y="326" text-anchor="middle">Быстрота</text>
+                <text x="456" y="211">Натиск</text>
+                <text x="370" y="131" text-anchor="end">Полная победа</text>
+                <text x="520" y="120" text-anchor="middle">Обратная связь</text>
+                <text x="640" y="104" text-anchor="middle">Перспектива</text>
+              </g>
+              <g class="camp__ranks">
+                <g transform="translate(70 497)"><rect x="-34" y="-12" width="68" height="24" rx="12"/><text y="4.5">Рекрут</text></g>
+                <g transform="translate(640 26)"><rect x="-38" y="-12" width="76" height="24" rx="12"/><text y="4.5">Генерал</text></g>
+                <g class="camp__here" transform="translate(56 268)"><rect x="-42" y="-13" width="84" height="26" rx="13"/><text y="5">Вы здесь</text></g>
+              </g>
+            </svg>
+
+            <div class="camp__card camp__order" aria-hidden="true">
+              <p class="camp__kick">Приказ на неделю · до пт</p>
+              <p class="camp__order-text"><b>Если</b> разбираю проблему с командой — <b>то</b> выбираем два‑три фактора, от которых зависит исход</p>
+              <p class="camp__order-foot"><span class="camp__box"></span>Отметить, как прошло</p>
+            </div>
+
+            <div class="camp__card camp__lesson" aria-hidden="true">
+              <p class="camp__kick">Этап 3 · Глазомер · 4 минуты</p>
+              <p class="camp__q">Сроки сдачи объекта срываются. Что делает руководитель с хорошим глазомером?</p>
+              <p class="camp__opt">Разбирает все пятнадцать причин по очереди</p>
+              <p class="camp__opt is-right"><span class="camp__ok"></span>Отбирает два‑три фактора, от которых зависит срок</p>
+              <p class="camp__verdict">Верно! <span>+10 опыта</span></p>
+            </div>
+
+            <figcaption class="camp__mobile">
+              <ol class="camp-list">
+                <li class="is-done"><b>1</b>Учение</li><li class="is-done"><b>2</b>Ясная цель</li><li class="is-now"><b>3</b>Глазомер <span>вы здесь</span></li>
+                <li><b>4</b>Постановка задач</li><li><b>5</b>Быстрота</li><li><b>6</b>Натиск</li>
+                <li><b>7</b>Полная победа</li><li><b>8</b>Обратная связь</li><li class="is-goal"><b>9</b>Перспектива <span>генерал</span></li>
+              </ol>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="shtab" aria-labelledby="shtab-h">
     <div class="wrap">
       <div class="grid fill">
@@ -526,6 +713,7 @@
             <li><b>{{ s.voice_free_per_month }} голосовых</b> сообщений в месяц</li>
             <li>Все режимы наставника: план, подготовка разговора, разбор после дела</li>
             <li>Штаб и общие задачи без ограничений</li>
+            <li>Первые два этапа «Учения»</li>
           </ul>
         </article>
         <article class="tcard is-featured">
@@ -538,6 +726,7 @@
             <li><b>{{ s.monthly_plan_limit|plural('разбор', 'разбора', 'разборов') }}</b> ситуаций в месяц</li>
             <li><b>{{ s.voice_per_month }} голосовых</b> сообщений в месяц</li>
             <li>Память о людях и уроках из прошлых разборов</li>
+            <li>Все девять этапов «Учения»</li>
             <li>Нужно больше: <b>+{{ s.pack_size|plural('разбор', 'разбора', 'разборов') }} за {{ s.pack_price_rub|rub }}</b>, не сгорают</li>
           </ul>
         </article>
@@ -646,7 +835,7 @@
           <a class="nav__logo" href="#top"><span class="mark" data-mark="arc" aria-hidden="true"></span>Наука побеждать</a>
           <p class="footer__lede">ИИ-наставник для руководителей по методу Суворова.</p>
         </div>
-        <div class="span-2 footer__col"><h3>Продукт</h3><ul><li><a href="#plan">План действий</a></li><li><a href="#how">Три шага</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Продукт</h3><ul><li><a href="#plan">План действий</a></li><li><a href="#how">Три шага</a></li><li><a href="#learn">Учение</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Команда</h3><ul><li><a href="#shtab">Штаб</a></li><li><a href="#method">Метод</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Цена</h3><ul><li><a href="#price">Тарифы</a></li><li><a href="#faq">FAQ</a></li></ul></div>
       </div>
@@ -699,6 +888,15 @@
   };
   addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
   nav.addEventListener('focusin', () => nav.classList.remove('nav--away'));
+})();
+</script>
+<script>
+(() => {
+  // «Учение»: the march on the map draws itself once, when the map comes into view
+  const map = document.querySelector('[data-camp]'); if (!map || !matchMedia('(min-width: 640px)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  map.classList.add('is-armed');
+  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { map.classList.add('is-in'); io.disconnect(); } }, { threshold: .35 });
+  io.observe(map);
 })();
 </script>
 </body>
