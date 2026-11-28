@@ -603,7 +603,8 @@ a, button, summary, label, input, select, textarea { touch-action: manipulation;
   .shtab-head__new { display: none !important; }
   .shtab-head .crumbs { justify-content: space-between; padding-top: env(safe-area-inset-top); }
   .shtab-head .quick { background: rgb(255 253 248 / .14); box-shadow: inset 0 0 0 1px rgb(255 253 248 / .22); }
-  .shtab-head .quick a { color: #fffdf8; }
+  .shtab-head .quick a { display: grid; place-items: center; width: 40px; height: 36px; min-height: 0; gap: 0; color: #fffdf8; }
+  .shtab-head .quick svg { width: 20px; height: 20px; }
   .shtab-head .quick a:active { background: rgb(255 253 248 / .12); }
 }
 
@@ -910,3 +911,12 @@ button.kpi[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
     transition: max-height .3s cubic-bezier(.2,.8,.2,1), opacity .2s ease, margin .3s ease; }
   .addt:focus-within .addt__go, .addt.is-open .addt__go { max-height: 48px; margin-top: 10px; opacity: 1; }
 }
+
+/* the head of a shtab: a quiet pencil next to the name, for the head of the shtab */
+.shtab-head h1 .nw { white-space: nowrap; }
+.shtab-edit { display: inline-grid; vertical-align: .12em; margin-left: 12px; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: rgb(255 253 248 / .12);
+  color: #fffdf8; cursor: pointer; opacity: .8; transition: opacity .15s ease, background-color .15s ease; }
+.shtab-edit svg { width: 18px; height: 18px; }
+.shtab-edit:hover, .shtab-edit:focus-visible { opacity: 1; background: rgb(255 253 248 / .22); }
+.app-page .shtab-edit:focus-visible { outline: 2px solid #fffdf8; outline-offset: 2px; }
+@media (max-width: 759px) { .shtab-edit { width: 34px; height: 34px; margin-left: 8px; } .shtab-edit svg { width: 16px; height: 16px; } }

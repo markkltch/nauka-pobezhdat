@@ -43,7 +43,7 @@
     <div class="crumbs"><a href="/app"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>К разговорам</a>{{ quick() }}</div>
     <div class="shtab-head__row">
       <div>
-        <h1>Штаб «{{ shtab.name }}»</h1>
+        <h1>Штаб «{{ shtab.name }}{% if is_owner %}<span class="nw">»<button class="shtab-edit" type="button" data-shtab-edit data-action="/shtab/{{ shtab.id }}/edit" data-name="{{ shtab.name }}" data-about="{{ shtab.about }}" aria-label="Изменить название и описание штаба" title="Изменить название"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.6 2.6l2.8 2.8-7.9 7.9H2.7v-2.8z"/><path d="M9.2 4l2.8 2.8"/></svg></button></span>{% else %}»{% endif %}</h1>
         <p>{% if shtab.about %}{{ shtab.about }} · {% endif %}{{ shtab.members|length|plural('участник', 'участника', 'участников') }}{% if is_owner %} · вы глава{% endif %}</p>
       </div>
       <a class="btn btn--primary shtab-head__new" href="/app">Новая ситуация</a>
@@ -54,7 +54,7 @@
 
 <main class="board" id="board" data-me="{{ user.id }}">
   <div class="board__main">
-    {% if flash %}<p class="flash" role="status" data-flash data-toast="{{ flash }}">{{ {'added': 'Задача добавлена.', 'saved': 'Сохранено.', 'deleted': 'Задача удалена.', 'reminded': 'Напоминание ушло на почту.', 'removed': 'Участник исключён из штаба.', 'failed': 'Письмо не ушло. Попробуйте позже.'}.get(flash, '') }}</p>{% endif %}
+    {% if flash %}<p class="flash" role="status" data-flash data-toast="{{ flash }}">{{ {'added': 'Задача добавлена.', 'saved': 'Сохранено.', 'deleted': 'Задача удалена.', 'reminded': 'Напоминание ушло на почту.', 'removed': 'Участник исключён из штаба.', 'renamed': 'Название сохранено.', 'failed': 'Письмо не ушло. Попробуйте позже.'}.get(flash, '') }}</p>{% endif %}
 
     <section class="sit" aria-label="Обстановка">
       <div class="kpis" role="group" aria-label="Обстановка — нажмите, чтобы показать эти задачи">

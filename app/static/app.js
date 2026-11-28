@@ -255,7 +255,7 @@
   const board = document.getElementById('board');
   if (board && board.querySelector('.sit')) {
     const said = { added: 'Задача добавлена', saved: 'Сохранено', deleted: 'Задача удалена', reminded: 'Напоминание ушло на почту',
-                   removed: 'Участник исключён из штаба', failed: 'Письмо не ушло. Попробуйте позже' };
+                   removed: 'Участник исключён из штаба', renamed: 'Название сохранено', failed: 'Письмо не ушло. Попробуйте позже' };
     const crew = () => JSON.parse(document.getElementById('crew-data')?.textContent || '[]');
     let toastEl = null, toastT = 0;
     const toast = text => {
@@ -344,8 +344,10 @@
         const fresh = [...board.querySelectorAll('.tk')].filter(n => !before.has(key(n)));
         fresh.forEach(n => n.classList.add('is-new'));
         setTimeout(() => fresh.forEach(n => n.classList.remove('is-new')), 1500);
-        const head = document.querySelector('.shtab-head__row p'), nhead = doc.querySelector('.shtab-head__row p');
-        if (head && nhead) head.textContent = nhead.textContent;
+        // the head: the name, the line under it, the tab's title
+        const head = document.querySelector('.shtab-head__row > div'), nhead = doc.querySelector('.shtab-head__row > div');
+        if (head && nhead) head.replaceChildren(...nhead.childNodes);
+        document.title = doc.title;
         applyFilters();
         toast(said[url.searchParams.get('done')] || note);
         if (f.hasAttribute('data-add')) board.querySelector('[data-add] input[name="text"]')?.focus();
@@ -394,6 +396,21 @@
         const ok = acts(f, close, 'Исключить'); setTimeout(() => ok.focus());
       });
     }
+    function askEditShtab(b) {
+      dialog((f, close) => {
+        f.action = b.dataset.action; f.dataset.soft = '';
+        const h = el('h2'); h.textContent = 'Название штаба'; f.append(h);
+        const name = el('input'); name.type = 'text'; name.name = 'name'; name.required = true; name.maxLength = 120; name.value = b.dataset.name;
+        name.placeholder = 'Например, Склад № 2';
+        const about = el('input'); about.type = 'text'; about.name = 'about'; about.maxLength = 240; about.value = b.dataset.about;
+        about.placeholder = 'Например, отдел логистики';
+        const hint = el('p', 'dlg__note'); hint.textContent = 'Название видят все участники: в шапке штаба, в меню и в письмах-напоминаниях.';
+        f.append(field('Название', name), field('Описание — необязательно', about), hint);
+        acts(f, close, 'Сохранить');
+        setTimeout(() => { name.focus(); name.select(); });
+      });
+    }
+    document.addEventListener('click', e => { const b = e.target.closest('[data-shtab-edit]'); if (b) askEditShtab(b); });
     menus.push(['[data-task-menu]', 'Действия с задачей', b => {
       const name = (b.dataset.whoName || '').split(' ')[0];
       const items = [{ label: 'Изменить', icon: I.pen, run: () => askEditTask(b) }];

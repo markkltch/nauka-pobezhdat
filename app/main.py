@@ -965,6 +965,20 @@ def step_remind(step_id: int, user: User = Depends(auth.require_user), db: Sessi
     return see_other(f"/shtab/{shtab.id}?done=reminded")
 
 
+@app.post("/shtab/{shtab_id}/edit")
+def shtab_edit(shtab_id: int, name: str = Form(""), about: str = Form(""),
+               user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    shtab = _member_shtab(db, user, shtab_id)
+    if shtab.owner_id != user.id:
+        raise HTTPException(403)
+    clean = " ".join(name.split()).strip("«»\"' ")[:120]
+    if clean:
+        shtab.name = clean
+    shtab.about = " ".join(about.split())[:240]
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}?done=renamed")
+
+
 @app.post("/shtab/{shtab_id}/members/{uid}/remove")
 def shtab_remove_member(shtab_id: int, uid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     shtab = _member_shtab(db, user, shtab_id)

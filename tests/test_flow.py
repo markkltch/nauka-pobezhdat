@@ -372,3 +372,24 @@ def test_shtab_board_manage_tasks(client, monkeypatch):
     assert "вне штаба" in client.get(f"/shtab/{shtab_id}").text
     sign_in(client, "worker@example.ru", name="Пётр Работник")
     assert client.get(f"/shtab/{shtab_id}").status_code == 404
+
+
+def test_shtab_rename(client):
+    from app.models import Shtab
+    sign_in(client, "namer@example.ru", name="Глава Именной")
+    r = client.post("/shtab/new", data={"name": "Мой штаб"}, follow_redirects=False)
+    shtab_id = int(r.headers["location"].rsplit("/", 1)[1])
+    assert "data-shtab-edit" in client.get(f"/shtab/{shtab_id}").text
+    r = client.post(f"/shtab/{shtab_id}/edit", data={"name": " «Склад   № 2» ", "about": "Отдел логистики"}, follow_redirects=False)
+    assert r.headers["location"].endswith("?done=renamed")
+    page = client.get(f"/shtab/{shtab_id}").text
+    assert "Штаб «Склад № 2»" in page and "Отдел логистики" in page
+    client.post(f"/shtab/{shtab_id}/edit", data={"name": "   ", "about": ""})
+    with SessionLocal() as db:
+        s = db.get(Shtab, shtab_id)
+        assert s.name == "Склад № 2" and s.about == ""
+        invite = s.invite_token
+    sign_in(client, "member2@example.ru", name="Просто Участник")
+    client.get(f"/join/{invite}")
+    assert "data-shtab-edit" not in client.get(f"/shtab/{shtab_id}").text
+    assert client.post(f"/shtab/{shtab_id}/edit", data={"name": "Чужое"}).status_code == 403
