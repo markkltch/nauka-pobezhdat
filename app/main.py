@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
-from . import access, auth, billing, emails, files, jobs, learn, legal, llm, mentor, speech, tbank, yandex_id
+from . import access, auth, billing, emails, files, jobs, learn, legal, llm, mailer, mentor, speech, tbank, yandex_id
 from .config import get_settings
 from .db import get_db, init_db
 from .models import (LEVELS, LearnAssign, LearnDone, LearnMark, LearnNote, LearnOrder, Lesson, Member, Message, PackOrder, Payment,
@@ -745,7 +745,8 @@ def plan_send(pid: int, shtab_id: int = Form(...), user: User = Depends(auth.req
     plan.sent_to_shtab_id = shtab.id
     for step in plan.steps:
         step.shtab_id = shtab.id
-        if step.owner_name.strip().lower() in {"вы", "я", user.display_name.lower()}:
+        who = step.owner_name.strip().lower()
+        if who in {"вы", "я", user.display_name.lower()} or (who.split() or [""])[0].strip(",") in {"вы", "я"}:
             step.assignee_id = user.id
     db.commit()
     return see_other(f"/shtab/{shtab.id}")
@@ -801,16 +802,182 @@ def shtab_new(name: str = Form(...), about: str = Form(""), user: User = Depends
     return see_other(f"/shtab/{shtab.id}")
 
 
+def _can_manage(user: User, shtab: Shtab, step: Step) -> bool:
+    """Who may edit, delete or nudge a task: the head, whoever added it, the author of its plan."""
+    return (shtab.owner_id == user.id or step.created_by == user.id
+            or bool(step.plan and step.plan.user_id == user.id))
+
+
+def _due_state(step: Step, today: dt.date) -> str:
+    if step.done:
+        return "done"
+    if not step.due:
+        return "nodate"
+    days = (step.due - today).days
+    return "late" if days < 0 else "soon" if days <= 1 else "week" if days <= 7 else "later"
+
+
+def _due_text(step: Step, today: dt.date) -> str:
+    if not step.due:
+        return ""
+    days = (step.due - today).days
+    if days < 0:
+        return "просрочено на " + _plural(-days, "день", "дня", "дней")
+    return "сегодня" if days == 0 else "завтра" if days == 1 else f"до {_ru_date(step.due)}"
+
+
+def _board(db: Session, user: User, shtab: Shtab) -> dict:
+    """The shtab's board: the situation at a glance, the tasks grouped by the plan they serve, the people's load."""
+    today = dt.date.today()
+    week_ago = now() - dt.timedelta(days=7)
+    tasks = db.scalars(select(Step).where(Step.shtab_id == shtab.id).order_by(Step.done, Step.due.is_(None), Step.due, Step.id)).all()
+    open_ = [t for t in tasks if not t.done]
+    done = sorted([t for t in tasks if t.done], key=lambda t: t.done_at or t.created_at, reverse=True)
+    members = {m.user_id for m in shtab.members}
+    rows = {}
+    for t in tasks:
+        state = _due_state(t, today)
+        recent = bool(t.reminded_at and t.reminded_at > now() - dt.timedelta(hours=20))
+        assignee = t.assignee if t.assignee_id in members else None
+        rows[t.id] = {
+            "t": t, "state": state, "due_text": _due_text(t, today), "who": assignee,
+            "outside": "" if assignee else (t.owner_name or "").strip(),
+            "can": _can_manage(user, shtab, t),
+            "remind": ("" if t.done or not assignee or assignee.id == user.id else
+                       "off" if not assignee.remind_steps else "sent" if recent else "ok"),
+        }
+    # operations: one per plan, the ones on fire first, then by the nearest date; loose tasks last
+    groups: dict = {}
+    for t in open_:
+        groups.setdefault(t.plan_id or 0, []).append(t)
+    plan_ids = [pid for pid in groups if pid]
+    plans = {p.id: p for p in db.scalars(select(Plan).where(Plan.id.in_(plan_ids))).all()} if plan_ids else {}
+    all_by_plan: dict = {}
+    for t in tasks:
+        if t.plan_id:
+            all_by_plan.setdefault(t.plan_id, []).append(t)
+    ops = []
+    for pid, items in groups.items():
+        plan = plans.get(pid)
+        every = all_by_plan.get(pid, items)
+        dues = [t.due for t in every if t.due]
+        ops.append({
+            "plan": plan, "tasks": items, "total": len(every), "done": sum(1 for t in every if t.done),
+            "late": sum(1 for t in items if rows[t.id]["state"] == "late"),
+            "until": max(dues) if dues else None, "aim": (plan.victory or plan.goal) if plan else "",
+            "mine": bool(plan and plan.user_id == user.id),
+            "next": min((t.due for t in items if t.due), default=dt.date.max),
+        })
+    ops.sort(key=lambda o: (o["plan"] is None, -o["late"], o["next"]))
+    kpi = {
+        "late": sum(1 for t in open_ if rows[t.id]["state"] == "late"),
+        "soon": sum(1 for t in open_ if rows[t.id]["state"] == "soon"),
+        "week": sum(1 for t in open_ if rows[t.id]["state"] == "week"),
+        "done7": sum(1 for t in done if t.done_at and t.done_at >= week_ago),
+        "open": len(open_),
+        "mine": sum(1 for t in open_ if t.assignee_id == user.id),
+    }
+    people = []
+    for m in shtab.members:
+        mine = [t for t in open_ if t.assignee_id == m.user_id]
+        people.append({"m": m, "open": len(mine), "late": sum(1 for t in mine if rows[t.id]["state"] == "late"),
+                       "done7": sum(1 for t in done if t.assignee_id == m.user_id and t.done_at and t.done_at >= week_ago)})
+    outside = sorted({rows[t.id]["outside"] for t in open_ if rows[t.id]["outside"]
+                      and rows[t.id]["outside"].split()[0].lower().strip(",") not in {"вы", "я"}})
+    late = [t for t in open_ if rows[t.id]["state"] == "late"]
+    nearest = next((t for t in open_ if t.due), None)
+    crew = [{"id": m.user_id, "name": m.user.display_name + (" (вы)" if m.user_id == user.id else "")} for m in shtab.members]
+    return {"rows": rows, "ops": ops, "done": done, "kpi": kpi, "people": people, "outside": outside, "crew": crew,
+            "late": late, "nearest": nearest, "unassigned": sum(1 for t in open_ if not rows[t.id]["who"])}
+
+
 @app.get("/shtab/{shtab_id}", response_class=HTMLResponse)
 def shtab_view(request: Request, shtab_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     if r := _gate(db, user):
         return r
     shtab = _member_shtab(db, user, shtab_id)
-    tasks = db.scalars(select(Step).where(Step.shtab_id == shtab.id).order_by(Step.done, Step.due, Step.id)).all()
-    late = [t for t in tasks if t.late]
-    return page(request, "shtab.html", user=user, shtab=shtab, tasks=tasks, late=late,
-                invite_url=f"{get_settings().base_url}/join/{shtab.invite_token}",
+    return page(request, "shtab.html", user=user, shtab=shtab, b=_board(db, user, shtab), today=dt.date.today(),
+                invite_url=f"{get_settings().base_url}/join/{shtab.invite_token}", flash=request.query_params.get("done", ""),
                 is_owner=shtab.owner_id == user.id, shtabs=my_shtabs(db, user))
+
+
+def _shtab_step(db: Session, user: User, step_id: int, manage: bool = True) -> tuple[Step, Shtab]:
+    step = db.get(Step, step_id)
+    if not step or not step.shtab_id or not _is_member(db, user, step.shtab_id):
+        raise HTTPException(404)
+    shtab = db.get(Shtab, step.shtab_id)
+    if manage and not _can_manage(user, shtab, step):
+        raise HTTPException(403)
+    return step, shtab
+
+
+def _parse_due(due: str) -> dt.date | None:
+    try:
+        return dt.date.fromisoformat(due) if due else None
+    except ValueError:
+        return None
+
+
+@app.post("/steps/{step_id}/edit")
+def step_edit(step_id: int, text: str = Form(""), assignee_id: int = Form(0), due: str = Form(""),
+              user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    step, shtab = _shtab_step(db, user, step_id)
+    clean = " ".join(text.split())[:500]
+    if clean:
+        step.text = clean
+    target = db.get(User, assignee_id) if assignee_id else None
+    step.assignee_id = target.id if target and _is_member(db, target, shtab.id) else None
+    new_due = _parse_due(due)
+    if new_due != step.due:
+        step.reminded_at = None
+    step.due = new_due
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}?done=saved")
+
+
+@app.post("/steps/{step_id}/delete")
+def step_delete(step_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    step, shtab = _shtab_step(db, user, step_id)
+    db.execute(update(LearnOrder).where(LearnOrder.step_id == step.id).values(step_id=None))
+    db.delete(step)
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}?done=deleted")
+
+
+@app.post("/steps/{step_id}/remind")
+def step_remind(step_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    step, shtab = _shtab_step(db, user, step_id)
+    who = step.assignee
+    recent = step.reminded_at and step.reminded_at > now() - dt.timedelta(hours=20)
+    if step.done or not who or who.id == user.id or not who.remind_steps or recent or not _is_member(db, who, shtab.id):
+        return see_other(f"/shtab/{shtab.id}")
+    today = dt.date.today()
+    when = _due_text(step, today)
+    letter = emails.nudge(who.id, user.display_name, shtab.name, step.text, when,
+                          f"{get_settings().base_url}/shtab/{shtab.id}", bool(step.due and step.due < today))
+    try:
+        mailer.send_letter(who.email, letter)
+    except Exception:  # noqa: BLE001
+        logging.getLogger("app").exception("nudge failed for step %s", step.id)
+        return see_other(f"/shtab/{shtab.id}?done=failed")
+    step.reminded_at = now()
+    db.commit()
+    return see_other(f"/shtab/{shtab.id}?done=reminded")
+
+
+@app.post("/shtab/{shtab_id}/members/{uid}/remove")
+def shtab_remove_member(shtab_id: int, uid: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    shtab = _member_shtab(db, user, shtab_id)
+    if shtab.owner_id != user.id or uid == user.id:
+        raise HTTPException(403)
+    member = db.scalars(select(Member).where(Member.shtab_id == shtab.id, Member.user_id == uid)).first()
+    if member:
+        name = member.user.display_name
+        for t in db.scalars(select(Step).where(Step.shtab_id == shtab.id, Step.assignee_id == uid, Step.done.is_(False))).all():
+            t.assignee_id, t.owner_name = None, name
+        db.delete(member)
+        db.commit()
+    return see_other(f"/shtab/{shtab.id}?done=removed")
 
 
 @app.post("/shtab/{shtab_id}/tasks")
@@ -824,9 +991,12 @@ def shtab_add_task(shtab_id: int, text: str = Form(...), assignee_id: int = Form
         except ValueError:
             due_date = None
     assignee = assignee_id if assignee_id and _is_member(db, db.get(User, assignee_id), shtab.id) else None
-    db.add(Step(shtab_id=shtab.id, text=text.strip()[:500], assignee_id=assignee, due=due_date, created_by=user.id))
+    clean = " ".join(text.split())[:500]
+    if not clean:
+        return see_other(f"/shtab/{shtab.id}")
+    db.add(Step(shtab_id=shtab.id, text=clean, assignee_id=assignee, due=due_date, created_by=user.id))
     db.commit()
-    return see_other(f"/shtab/{shtab.id}")
+    return see_other(f"/shtab/{shtab.id}?done=added")
 
 
 @app.post("/steps/{step_id}/assign")

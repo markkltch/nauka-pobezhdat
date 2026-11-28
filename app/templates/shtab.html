@@ -2,6 +2,40 @@
 {% block title %}Штаб «{{ shtab.name }}» — {{ BRAND }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="/static/learn.css?v=3">{% endblock %}
 {% from "_quick.html" import quick %}
+{% set k = b.kpi %}
+
+{# one task: a round tick, the text, who and when; ⋯ for those who may change it #}
+{% macro row(t) %}{% set r = b.rows[t.id] %}
+<li class="tk is-{{ r.state }}" id="t{{ t.id }}" data-state="{{ r.state }}" data-who="{{ t.assignee_id if r.who else 0 }}">
+  <form class="tk__check" method="post" action="/steps/{{ t.id }}/toggle" data-soft data-toggle>
+    <button class="tick" type="submit" role="checkbox" aria-checked="{{ 'true' if t.done else 'false' }}" aria-label="{{ 'Вернуть в работу' if t.done else 'Отметить сделанной' }}: {{ t.text[:80] }}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.8 8.4l2.7 2.7 5.7-6"/></svg></button>
+  </form>
+  <div class="tk__body">
+    <p class="tk__text">{{ t.text }}</p>
+    <div class="tk__meta">
+      {% if t.kind == 'talk' %}<span class="tag">Разговор</span>{% elif t.kind == 'check' %}<span class="tag">Проверка</span>{% endif %}
+      {% if t.done %}
+        <span class="tk__who"><span class="av av--xs">{{ (r.who.display_name if r.who else r.outside or '?')|initials }}</span>{{ r.who.display_name if r.who else r.outside or 'Без исполнителя' }}</span>
+        <span class="due">сделано {{ (t.done_at|msk).date()|ru_date if t.done_at else '' }}</span>
+      {% else %}
+        <form class="tk__who" method="post" action="/steps/{{ t.id }}/assign" data-soft>
+          <span class="av av--xs {% if not r.who %}av--none{% endif %}" aria-hidden="true">{{ (r.who.display_name if r.who else r.outside or '?')|initials }}</span>
+          <label class="sr-only" for="as{{ t.id }}">Исполнитель</label>
+          <select id="as{{ t.id }}" name="assignee_id" data-autosubmit>
+            <option value="0">{{ r.outside or 'Без исполнителя' }}{% if r.outside %} · вне штаба{% endif %}</option>
+            {% for m in shtab.members %}<option value="{{ m.user.id }}" {% if r.who and t.assignee_id == m.user.id %}selected{% endif %}>{{ m.user.display_name }}{% if m.user.id == user.id %} (вы){% endif %}</option>{% endfor %}
+          </select>
+        </form>
+        <span class="due due--{{ r.state }}">{% if r.state == 'late' %}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.3v.2"/></svg>{% endif %}{{ r.due_text or 'без срока' }}</span>
+        {% if r.remind == 'sent' %}<span class="tk__sent">напомнили сегодня</span>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% if r.can %}<button class="tk__more" type="button" data-task-menu="{{ t.id }}" data-text="{{ t.text }}" data-who="{{ t.assignee_id if r.who else 0 }}" data-due="{{ t.due.isoformat() if t.due else '' }}" data-done="{{ 1 if t.done else '' }}"
+    data-remind="{{ r.remind }}" data-who-name="{{ r.who.display_name if r.who else '' }}" data-plan="{{ t.plan.title if t.plan else '' }}" aria-haspopup="menu" aria-expanded="false" aria-label="Действия с задачей"><svg class="i-dots" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></button>{% endif %}
+</li>
+{% endmacro %}
+
 {% block body %}
 <a class="skip-link" href="#board">К задачам</a>
 <header class="shtab-head">
@@ -10,7 +44,7 @@
     <div class="shtab-head__row">
       <div>
         <h1>Штаб «{{ shtab.name }}»</h1>
-        {% if shtab.about %}<p>{{ shtab.about }}</p>{% endif %}
+        <p>{% if shtab.about %}{{ shtab.about }} · {% endif %}{{ shtab.members|length|plural('участник', 'участника', 'участников') }}{% if is_owner %} · вы глава{% endif %}</p>
       </div>
       <a class="btn btn--primary shtab-head__new" href="/app">Новая ситуация</a>
     </div>
@@ -18,88 +52,141 @@
   </div>
 </header>
 
-<main class="board" id="board">
-  <div>
-    {% if late %}
-    <div class="hint">
-      <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
-      <p>Срок прошёл: {{ late|length|plural('задача', 'задачи', 'задач') }}. Первая — <b>«{{ late[0].text[:80] }}»</b>{% if late[0].assignee %}, {{ late[0].assignee.display_name }}{% endif %}.</p>
+<main class="board" id="board" data-me="{{ user.id }}">
+  <div class="board__main">
+    {% if flash %}<p class="flash" role="status" data-flash data-toast="{{ flash }}">{{ {'added': 'Задача добавлена.', 'saved': 'Сохранено.', 'deleted': 'Задача удалена.', 'reminded': 'Напоминание ушло на почту.', 'removed': 'Участник исключён из штаба.', 'failed': 'Письмо не ушло. Попробуйте позже.'}.get(flash, '') }}</p>{% endif %}
+
+    <section class="sit" aria-label="Обстановка">
+      <div class="kpis" role="group" aria-label="Обстановка — нажмите, чтобы показать эти задачи">
+        <button class="kpi kpi--late {% if k.late %}is-hot{% endif %}" type="button" data-filter="late" aria-pressed="false"><b>{{ k.late }}</b><span>Горит</span></button>
+        <button class="kpi" type="button" data-filter="soon" aria-pressed="false"><b>{{ k.soon }}</b><span>Сегодня и завтра</span></button>
+        <button class="kpi" type="button" data-filter="week" aria-pressed="false"><b>{{ k.week }}</b><span>На неделе</span></button>
+        <div class="kpi kpi--done"><b>{{ k.done7 }}</b><span>Сделано за 7 дней</span></div>
+      </div>
+
+      <div class="brief {% if b.late %}brief--hot{% endif %}">
+        <span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span>
+        <div class="brief__text">
+          {% if b.late %}
+            {% set t = b.late[0] %}{% set r = b.rows[t.id] %}
+            <p>{% if b.late|length == 1 %}Горит задача: <b>{% else %}Горит {{ b.late|length|plural('задача', 'задачи', 'задач') }}. Первая — <b>{% endif %}«{{ t.text[:90] }}{% if t.text|length > 90 %}…{% endif %}»</b>, {{ r.who.display_name if r.who else (r.outside or 'без исполнителя') }}, {{ r.due_text }}.</p>
+            <small>«Время дороже всего — надо беречь его». А. В. Суворов</small>
+          {% elif b.outside %}
+            <p>{{ b.unassigned|plural('задача', 'задачи', 'задач') }} {{ 'стоит' if b.unassigned == 1 else 'стоят' }} на людях вне штаба: <b>{{ b.outside|join(', ') }}</b>. Пригласите их по ссылке справа — тогда задачи и напоминания будут приходить им, а вы увидите отметки.</p>
+          {% elif not k.open and not b.done %}
+            <p>Здесь план из разбора становится работой команды. Под готовым планом нажмите <b>«Отправить в штаб»</b> — каждый шаг станет задачей с исполнителем и сроком.</p>
+          {% elif not k.open %}
+            <p>Все задачи сделаны. Начните новый разбор, когда появится следующая ситуация.</p>
+          {% elif b.nearest %}
+            {% set r = b.rows[b.nearest.id] %}
+            <p>Всё идёт по плану. Ближайший срок — {{ r.due_text }}: <b>«{{ b.nearest.text[:90] }}{% if b.nearest.text|length > 90 %}…{% endif %}»</b>, {{ r.who.display_name if r.who else (r.outside or 'без исполнителя') }}.</p>
+            <small>«Каждый воин должен понимать свой маневр». А. В. Суворов</small>
+          {% else %}
+            <p>У задач нет сроков. Поставьте их — тогда исполнителям будут приходить напоминания, а здесь будет видно, что горит.</p>
+          {% endif %}
+        </div>
+        {% if b.late %}{% set t = b.late[0] %}{% set r = b.rows[t.id] %}{% if r.can and r.remind == 'ok' %}
+        <form method="post" action="/steps/{{ t.id }}/remind" data-soft><button class="btn btn--secondary" type="submit">Напомнить: {{ r.who.display_name.split()[0] }}</button></form>
+        {% endif %}{% endif %}
+      </div>
+    </section>
+
+    <div class="board__bar">
+      <div class="wseg" role="group" aria-label="Чьи задачи показать">
+        <button type="button" data-who-filter="all" aria-pressed="true">Все <span>{{ k.open }}</span></button>
+        <button type="button" data-who-filter="{{ user.id }}" aria-pressed="false">Мои <span>{{ k.mine }}</span></button>
+      </div>
+      <p class="board__note" data-filter-note hidden><span></span><button type="button" data-filter-reset>Показать все</button></p>
+    </div>
+
+    <form class="addt" method="post" action="/shtab/{{ shtab.id }}/tasks" data-soft data-add>
+      <svg class="addt__plus" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+      <label class="sr-only" for="t-text">Новая задача</label>
+      <input id="t-text" name="text" placeholder="Новая задача — что сделать" required maxlength="500" autocomplete="off">
+      <div class="addt__more">
+        <label class="sr-only" for="t-who">Исполнитель</label>
+        <select id="t-who" name="assignee_id"><option value="0">Исполнитель</option>{% for m in shtab.members %}<option value="{{ m.user.id }}">{{ m.user.display_name }}{% if m.user.id == user.id %} (вы){% endif %}</option>{% endfor %}</select>
+        <label class="sr-only" for="t-due">Срок</label>
+        <input id="t-due" name="due" type="date" min="{{ today.isoformat() }}">
+        <button class="btn btn--primary" type="submit">Добавить</button>
+      </div>
+    </form>
+
+    {% for op in b.ops %}
+    <section class="op" data-op aria-labelledby="op{{ loop.index }}">
+      <header class="op__head">
+        <p class="op__kick">{% if op.plan %}План из разбора{% else %}Задачи вне планов{% endif %}{% if op.late %}<span class="op__hot">горит {{ op.late }}</span>{% endif %}</p>
+        <h2 id="op{{ loop.index }}">{{ op.plan.title if op.plan else 'Отдельные задачи' }}</h2>
+        {% if op.aim %}<p class="op__aim"><span>Победа —</span> {{ op.aim }}</p>{% endif %}
+        {% if op.plan %}
+        <div class="op__prog">
+          <div class="op__bar" role="progressbar" aria-label="Сделано" aria-valuemin="0" aria-valuemax="{{ op.total }}" aria-valuenow="{{ op.done }}"><i style="width: {{ (op.done * 100 / op.total)|round|int if op.total else 0 }}%"></i></div>
+          <span>{{ op.done }} из {{ op.total }}{% if op.until %} · до {{ op.until|ru_date }}{% endif %}</span>
+          {% if op.mine %}<a class="op__link" href="/app/{{ op.plan.situation_id }}">Разбор<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"/></svg></a>{% endif %}
+        </div>
+        {% endif %}
+      </header>
+      <ul class="tl">{% for t in op.tasks %}{{ row(t) }}{% endfor %}</ul>
+    </section>
+    {% endfor %}
+
+    {% if not b.ops %}
+    <div class="board__empty" data-empty-all>
+      <p><b>{% if b.done %}В работе пусто.{% else %}Задач пока нет.{% endif %}</b> {% if b.done %}Всё сделано — сделанное ниже.{% else %}Добавьте задачу выше или отправьте сюда план из разбора.{% endif %}</p>
     </div>
     {% endif %}
+    <p class="board__empty" data-empty-filter hidden>Таких задач нет.</p>
 
-    {% set open = tasks|rejectattr('done')|list %}
-    {% set done = tasks|selectattr('done')|list %}
-    <section class="group" aria-labelledby="g-work">
-      <h2 id="g-work">В работе <span>{{ open|length }}</span></h2>
-      {% if open %}
-      <ul class="tasks">
-        {% for t in open %}
-        <li class="task {% if t.late %}is-late{% endif %}">
-          <form method="post" action="/steps/{{ t.id }}/toggle"><label><input type="checkbox" onchange="this.form.submit()"><span class="task__text">{{ t.text }}{% if t.plan %}<small>Из плана «{{ t.plan.title }}»</small>{% endif %}</span></label></form>
-          <form method="post" action="/steps/{{ t.id }}/assign" class="who">
-            <label class="sr-only" for="as{{ t.id }}">Исполнитель</label>
-            <select id="as{{ t.id }}" name="assignee_id" onchange="this.form.submit()">
-              <option value="0">{{ t.owner_name or "Не назначен" }}</option>
-              {% for m in shtab.members %}<option value="{{ m.user.id }}" {% if t.assignee_id == m.user.id %}selected{% endif %}>{{ m.user.display_name }}</option>{% endfor %}
-            </select>
-          </form>
-          <time>{% if t.late %}срок прошёл, {% endif %}{{ t.due|ru_date }}</time>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="empty">Задач нет. Отправьте сюда план из разговора с наставником или добавьте задачу ниже.</p>
-      {% endif %}
-    </section>
-
-    <section class="group" aria-labelledby="g-add">
-      <h2 id="g-add">Новая задача</h2>
-      <form class="add-task" method="post" action="/shtab/{{ shtab.id }}/tasks">
-        <label class="sr-only" for="t-text">Задача</label>
-        <input id="t-text" name="text" placeholder="Что сделать" required>
-        <label class="sr-only" for="t-who">Исполнитель</label>
-        <select id="t-who" name="assignee_id"><option value="0">Исполнитель</option>{% for m in shtab.members %}<option value="{{ m.user.id }}">{{ m.user.display_name }}</option>{% endfor %}</select>
-        <label class="sr-only" for="t-due">Срок</label>
-        <input id="t-due" name="due" type="date">
-        <button class="btn btn--secondary" type="submit">Добавить</button>
-      </form>
-    </section>
-
-    {% if done %}
-    <section class="group" aria-labelledby="g-done">
-      <h2 id="g-done">Сделано <span>{{ done|length }}</span></h2>
-      <ul class="tasks">
-        {% for t in done %}
-        <li class="task is-done">
-          <form method="post" action="/steps/{{ t.id }}/toggle"><label><input type="checkbox" checked onchange="this.form.submit()"><span class="task__text">{{ t.text }}</span></label></form>
-          <span class="who">{{ t.assignee.display_name if t.assignee else t.owner_name }}</span><time>{{ t.due|ru_date }}</time>
-        </li>
-        {% endfor %}
-      </ul>
-    </section>
+    {% if b.done %}
+    <details class="op op--done" data-done-group>
+      <summary><span>Сделано</span> <b>{{ b.done|length }}</b><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></summary>
+      <ul class="tl">{% for t in b.done[:60] %}{{ row(t) }}{% endfor %}</ul>
+    </details>
     {% endif %}
   </div>
 
-  <aside>
-    <section class="panel-card" aria-labelledby="p-people">
-      <h2 id="p-people">Люди</h2>
-      <ul class="people">
-        {% for m in shtab.members %}
-        <li><span class="av {% if m.user.id == shtab.owner_id %}av--ink{% endif %}">{{ m.user.initials }}</span><span><b>{{ m.user.display_name }}</b><span>{{ m.title or m.user.role or "Участник" }}</span></span></li>
+  <aside class="board__side">
+    <section class="panel-card crew-card" aria-labelledby="p-people">
+      <h2 id="p-people">Люди <span>{{ shtab.members|length }}</span></h2>
+      <ul class="crew">
+        {% for p in b.people %}{% set m = p.m %}
+        <li>
+          <button class="crew__who" type="button" data-who-filter="{{ m.user_id }}" aria-pressed="false" aria-label="Показать задачи: {{ m.user.display_name }}">
+            <span class="av {% if m.user_id == shtab.owner_id %}av--ink{% endif %}">{{ m.user.initials }}</span>
+            <span class="crew__txt"><b>{{ m.user.display_name }}{% if m.user_id == user.id %} <i>вы</i>{% endif %}</b>
+              <span>{% if m.user_id == shtab.owner_id %}Глава штаба{% else %}{{ m.title or m.user.role or 'Участник' }}{% endif %}</span></span>
+            <span class="crew__load">{% if p.open %}<span><b>{{ p.open }}</b> в работе</span>{% if p.late %}<em>{{ p.late }} горит</em>{% endif %}{% else %}<span>свободен</span>{% endif %}</span>
+          </button>
+          {% if is_owner and m.user_id != user.id %}<button class="crew__more" type="button" data-member-menu="{{ m.user_id }}" data-name="{{ m.user.display_name }}" data-open="{{ p.open }}" data-action="/shtab/{{ shtab.id }}/members/{{ m.user_id }}/remove" aria-haspopup="menu" aria-expanded="false" aria-label="Действия: {{ m.user.display_name }}"><svg class="i-dots" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg></button>{% endif %}
+        </li>
         {% endfor %}
       </ul>
-      <label for="inv" class="small muted">Ссылка-приглашение — отправьте её в MAX, Telegram или почтой</label>
-      <div class="invite"><input id="inv" value="{{ invite_url }}" readonly onclick="this.select()"><button class="btn btn--secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('inv').value).then(()=>{this.textContent='Скопировано'})">Скопировать</button></div>
-    </section>
-    <section class="panel-card" aria-labelledby="p-bill">
-      <h2 id="p-bill">Счёт штаба</h2>
-      <div class="bill">
-        <p><span>{{ shtab.members|length|plural('человек', 'человека', 'человек') }} × {{ settings().price_per_seat_rub|rub }}</span><b>{{ (shtab.members|length * settings().price_per_seat_rub)|rub }}</b></p>
-        <p class="bill__total"><span>В месяц</span><b>{{ (shtab.members|length * settings().price_per_seat_rub)|rub }}</b></p>
+      {% if b.outside %}<p class="crew__out">Вне штаба, но с задачами: {{ b.outside|join(', ') }}.</p>{% endif %}
+      <div class="invite-box">
+        <p><b>Пригласить в штаб</b>Человек открывает ссылку, входит по почте и сразу видит свои задачи.</p>
+        <div class="invite"><label class="sr-only" for="inv">Ссылка-приглашение</label><input id="inv" value="{{ invite_url }}" readonly><button class="btn btn--secondary" type="button" data-copy="#inv">Скопировать</button></div>
       </div>
-      {% if settings().free_beta %}<p class="small muted">Сейчас доступ бесплатный: идёт закрытый запуск.</p>
-      {% elif is_owner %}<a class="btn btn--secondary" href="/billing">Оплатить штаб</a>{% endif %}
     </section>
+
+    <details class="panel-card how" {% if not k.open and not b.done %}open{% endif %}>
+      <summary>Как работает штаб<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></summary>
+      <ol>
+        <li><b>План → задачи.</b> Под планом в разборе нажмите «Отправить в штаб»: шаги станут задачами.</li>
+        <li><b>Каждый знает свой манёвр.</b> Над задачами — план и признак победы, ради которых они.</li>
+        <li><b>Напоминания сами.</b> Исполнителю приходит письмо накануне срока и при просрочке. Глава может напомнить вручную.</li>
+        <li><b>Отметка видна сразу.</b> Сделали — план показывает прогресс, «Горит» пустеет.</li>
+      </ol>
+    </details>
+
+    {% if is_owner and not settings().free_beta %}
+    <section class="panel-card bill-card" aria-labelledby="p-bill">
+      <h2 id="p-bill">Доступ для команды</h2>
+      <p class="bill__line"><span>{{ shtab.members|length|plural('человек', 'человека', 'человек') }} × {{ settings().price_per_seat_rub|rub }}</span><b>{{ (shtab.members|length * settings().price_per_seat_rub)|rub }} в месяц</b></p>
+      <p class="small muted">Полный доступ к наставнику для всех в штабе: по {{ settings().monthly_plan_limit }} разборов в месяц каждому. Задачи и напоминания работают и без оплаты.</p>
+      <a class="btn btn--secondary" href="/billing">Оплатить доступ</a>
+    </section>
+    {% endif %}
   </aside>
 </main>
+<script type="application/json" id="crew-data">{{ b.crew|tojson }}</script>
 {% endblock %}

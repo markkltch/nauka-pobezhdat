@@ -156,7 +156,9 @@
     pen: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.6 2.6l2.8 2.8-7.9 7.9H2.7v-2.8z"/><path d="M9.2 4l2.8 2.8"/></svg>',
     bin: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.8 4.3h10.4M6.3 4.3V2.8h3.4v1.5M4.2 4.3l.7 9h6.2l.7-9M6.7 6.8v4.2M9.3 6.8v4.2"/></svg>',
     team: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3"/><path d="M2 13c.5-2.3 2-3.6 4-3.6s3.5 1.3 4 3.6M11 4.5a2 2 0 010 4M12.5 13c-.2-1.4-.8-2.4-1.7-3"/></svg>',
-    count: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.7"/><path d="M8 5v3.2l2 1.3"/></svg>'
+    count: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.7"/><path d="M8 5v3.2l2 1.3"/></svg>',
+    bell: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 11.5V7.2a4 4 0 018 0v4.3l1.2 1.2H2.8zM6.6 14.2a1.6 1.6 0 002.8 0"/></svg>',
+    out: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="5.5" r="2.4"/><path d="M2.2 13.2c.5-2.4 2.1-3.7 4.3-3.7 1 0 1.9.3 2.6.8M10.5 10.5l3 3M13.5 10.5l-3 3"/></svg>'
   };
   const here = () => location.pathname + location.search;
   let pop = null, popFor = null;
@@ -209,33 +211,202 @@
       setTimeout(() => ok.focus());
     });
   }
-  document.addEventListener('click', e => {
-    const b = e.target.closest('[data-sit-menu]');
-    if (!b) { if (pop && !pop.contains(e.target)) closePop(); return; }
-    e.preventDefault();
+  // a small menu under a ⋯ button: items are {label, icon, run, danger, disabled}
+  function openMenu(b, label, items) {
     if (popFor === b) { closePop(); return; }
     closePop();
-    pop = el('div', 'pop'); pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', 'Действия с разбором');
-    const rn = el('button', '', I.pen + '<span>Переименовать</span>'), del = el('button', 'pop__danger', I.bin + '<span>Удалить</span>');
-    [rn, del].forEach(x => { x.type = 'button'; x.setAttribute('role', 'menuitem'); });
-    rn.addEventListener('click', () => { closePop(); askRename(b); });
-    del.addEventListener('click', () => { closePop(); askDelete(b); });
-    pop.append(rn, del); document.body.append(pop);
+    pop = el('div', 'pop'); pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', label);
+    items.forEach(it => {
+      const x = el('button', it.danger ? 'pop__danger' : '', it.icon); const t = el('span'); t.textContent = it.label; x.append(t);
+      x.type = 'button'; x.setAttribute('role', 'menuitem'); x.disabled = !!it.disabled;
+      if (it.run) x.addEventListener('click', () => { closePop(); it.run(); });
+      pop.append(x);
+    });
+    document.body.append(pop);
     popFor = b; b.setAttribute('aria-expanded', 'true');
     const r = b.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
     let top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
     pop.style.top = `${top}px`; pop.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
-    rn.focus();
+    pop.querySelector('button:not(:disabled)')?.focus();
+  }
+  const menus = [];   // [selector, label, (button) => items]
+  menus.push(['[data-sit-menu]', 'Действия с разбором', b => [
+    { label: 'Переименовать', icon: I.pen, run: () => askRename(b) },
+    { label: 'Удалить', icon: I.bin, danger: true, run: () => askDelete(b) }]]);
+  document.addEventListener('click', e => {
+    for (const [sel, label, items] of menus) {
+      const b = e.target.closest(sel);
+      if (b) { e.preventDefault(); openMenu(b, label, items(b)); return; }
+    }
+    if (pop && !pop.contains(e.target)) closePop();
   });
   document.addEventListener('keydown', e => {
     if (!pop) return;
-    const items = [...pop.querySelectorAll('button')], i = items.indexOf(document.activeElement);
+    const items = [...pop.querySelectorAll('button:not(:disabled)')], i = items.indexOf(document.activeElement);
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePop(true); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
     else if (e.key === 'Tab') closePop();
   }, true);
   addEventListener('resize', () => closePop());
   document.querySelector('.side')?.addEventListener('scroll', () => closePop(), { passive: true });
+
+  // the shtab's board: filters by the situation and by person, tasks changed in place (no page reload),
+  // ⋯ on a task: change, nudge the assignee, delete; ⋯ on a person (for the head): remove from the shtab
+  const board = document.getElementById('board');
+  if (board && board.querySelector('.sit')) {
+    const said = { added: 'Задача добавлена', saved: 'Сохранено', deleted: 'Задача удалена', reminded: 'Напоминание ушло на почту',
+                   removed: 'Участник исключён из штаба', failed: 'Письмо не ушло. Попробуйте позже' };
+    const crew = () => JSON.parse(document.getElementById('crew-data')?.textContent || '[]');
+    let toastEl = null, toastT = 0;
+    const toast = text => {
+      if (!text) return;
+      if (!toastEl) { toastEl = el('div', 'toast'); toastEl.setAttribute('role', 'status'); document.body.append(toastEl); }
+      toastEl.textContent = text; requestAnimationFrame(() => toastEl.classList.add('is-on'));
+      clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('is-on'), 2600);
+    };
+    const first = board.querySelector('[data-flash]');
+    if (first) { toast(said[first.dataset.toast]); first.remove(); history.replaceState(null, '', location.pathname); }
+
+    let fState = null, fWho = 'all';
+    const stateName = { late: 'горит', soon: 'сегодня и завтра', week: 'на неделе' };
+    function applyFilters() {
+      let shown = 0;
+      board.querySelectorAll('.op[data-op]').forEach(op => {
+        let any = 0;
+        op.querySelectorAll('.tk').forEach(li => {
+          const ok = (!fState || li.dataset.state === fState) && (fWho === 'all' || li.dataset.who === fWho);
+          li.hidden = !ok; if (ok) any++;
+        });
+        op.hidden = !any; shown += any;
+      });
+      const doneG = board.querySelector('[data-done-group]');
+      if (doneG) {
+        let any = 0;
+        doneG.querySelectorAll('.tk').forEach(li => { const ok = fWho === 'all' || li.dataset.who === fWho; li.hidden = !ok; if (ok) any++; });
+        doneG.hidden = !!fState || !any;
+      }
+      board.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === fState)));
+      board.querySelectorAll('[data-who-filter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.whoFilter === fWho)));
+      const active = !!fState || fWho !== 'all';
+      const note = board.querySelector('[data-filter-note]');
+      if (note) {
+        note.hidden = !active;
+        const who = fWho === 'all' ? '' : (fWho === board.dataset.me ? 'мои' : (crew().find(c => String(c.id) === fWho)?.name || ''));
+        note.querySelector('span').textContent = 'Показаны: ' + [fState && stateName[fState], who].filter(Boolean).join(' · ');
+      }
+      const ef = board.querySelector('[data-empty-filter]'); if (ef) ef.hidden = !active || shown > 0;
+      const ea = board.querySelector('[data-empty-all]'); if (ea) ea.hidden = active;
+    }
+    board.addEventListener('click', e => {
+      const f = e.target.closest('[data-filter]');
+      if (f) { fState = fState === f.dataset.filter ? null : f.dataset.filter; applyFilters(); return; }
+      const w = e.target.closest('[data-who-filter]');
+      if (w) { const v = w.dataset.whoFilter; fWho = v !== 'all' && fWho === v ? 'all' : v; applyFilters(); return; }
+      if (e.target.closest('[data-filter-reset]')) { fState = null; fWho = 'all'; applyFilters(); return; }
+      const c = e.target.closest('[data-copy]');
+      if (c) {
+        const i = board.querySelector(c.dataset.copy); i.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).catch(() => document.execCommand('copy'))
+          .finally(() => { c.textContent = 'Скопировано'; setTimeout(() => { c.textContent = 'Скопировать'; }, 2000); });
+      }
+    });
+    board.addEventListener('change', e => { if (e.target.matches('select[data-autosubmit]')) e.target.form.requestSubmit(); });
+    board.addEventListener('input', e => { const a = e.target.closest('[data-add]'); if (a) a.classList.toggle('is-open', !!e.target.value); });
+
+    // every change goes to the server in the background; the board comes back and replaces itself
+    document.addEventListener('submit', async e => {
+      const f = e.target;
+      if (!f.matches('form[data-soft]')) return;
+      e.preventDefault();
+      if (f.dataset.sending) return;
+      f.dataset.sending = '1';
+      const body = new FormData(f), li = f.closest('.tk');
+      let note = '';
+      if (f.hasAttribute('data-toggle') && li) {
+        const t = f.querySelector('.tick'), on = t.getAttribute('aria-checked') !== 'true';
+        t.setAttribute('aria-checked', String(on)); li.classList.add('is-leaving');
+        note = on ? 'Задача сделана' : 'Задача снова в работе';
+        await new Promise(r => setTimeout(r, 380));
+      }
+      f.closest('dialog')?.close();
+      try {
+        const res = await fetch(f.action, { method: 'POST', body, credentials: 'same-origin' });
+        const url = new URL(res.url);
+        const doc = res.ok && url.pathname.startsWith('/shtab/') ? new DOMParser().parseFromString(await res.text(), 'text/html') : null;
+        const nb = doc?.getElementById('board');
+        if (!nb) { location.assign(res.url); return; }
+        const key = n => `${n.id}|${n.dataset.state}|${n.dataset.who}`;
+        const before = new Set([...board.querySelectorAll('.tk')].map(key));
+        const openDone = board.querySelector('[data-done-group]')?.open;
+        board.replaceChildren(...nb.childNodes);
+        board.querySelector('[data-flash]')?.remove();
+        if (openDone) board.querySelector('[data-done-group]')?.setAttribute('open', '');
+        const fresh = [...board.querySelectorAll('.tk')].filter(n => !before.has(key(n)));
+        fresh.forEach(n => n.classList.add('is-new'));
+        setTimeout(() => fresh.forEach(n => n.classList.remove('is-new')), 1500);
+        const head = document.querySelector('.shtab-head__row p'), nhead = doc.querySelector('.shtab-head__row p');
+        if (head && nhead) head.textContent = nhead.textContent;
+        applyFilters();
+        toast(said[url.searchParams.get('done')] || note);
+        if (f.hasAttribute('data-add')) board.querySelector('[data-add] input[name="text"]')?.focus();
+      } catch {
+        li?.classList.remove('is-leaving');
+        toast('Нет связи. Попробуйте ещё раз');
+      } finally { delete f.dataset.sending; }
+    });
+    const post = action => {
+      const f = el('form'); f.method = 'post'; f.action = action; f.dataset.soft = ''; f.hidden = true;
+      document.body.append(f); f.requestSubmit(); setTimeout(() => f.remove(), 8000);
+    };
+    const field = (label, control) => { const l = el('label', 'dlg__field'); const s = el('span'); s.textContent = label; l.append(s, control); return l; };
+    function askEditTask(b) {
+      dialog((f, close) => {
+        f.action = `/steps/${b.dataset.taskMenu}/edit`; f.dataset.soft = '';
+        const h = el('h2'); h.textContent = 'Задача'; f.append(h);
+        const ta = el('textarea'); ta.name = 'text'; ta.required = true; ta.maxLength = 500; ta.value = b.dataset.text;
+        const who = el('select'); who.name = 'assignee_id';
+        [{ id: 0, name: 'Без исполнителя' }, ...crew()].forEach(c => { const o = el('option'); o.value = c.id; o.textContent = c.name; o.selected = String(c.id) === b.dataset.who; who.append(o); });
+        const due = el('input'); due.type = 'date'; due.name = 'due'; due.value = b.dataset.due;
+        const row = el('div', 'dlg__row'); row.append(field('Исполнитель', who), field('Срок', due));
+        f.append(field('Что сделать', ta), row);
+        acts(f, close, 'Сохранить');
+        setTimeout(() => ta.focus());
+      });
+    }
+    function askDeleteTask(b) {
+      dialog((f, close) => {
+        f.action = `/steps/${b.dataset.taskMenu}/delete`; f.dataset.soft = '';
+        const h = el('h2'); h.textContent = 'Удалить задачу?'; f.append(h);
+        const p = el('p'), t = el('b'); t.textContent = `«${b.dataset.text.length > 120 ? b.dataset.text.slice(0, 120) + '…' : b.dataset.text}»`;
+        p.append(t, document.createTextNode(` исчезнет у всех в штабе${b.dataset.plan ? ` и из плана «${b.dataset.plan}»` : ''}. Вернуть будет нельзя.`));
+        f.append(p);
+        const ok = acts(f, close, 'Удалить'); setTimeout(() => ok.focus());
+      });
+    }
+    function askRemoveMember(b) {
+      dialog((f, close) => {
+        f.action = b.dataset.action; f.dataset.soft = '';
+        const h = el('h2'); h.textContent = `Исключить из штаба: ${b.dataset.name}?`; f.append(h);
+        const p = el('p'); p.textContent = 'Человек больше не увидит задачи штаба.' +
+          (+b.dataset.open ? ` Его задачи в работе (${b.dataset.open}) останутся без исполнителя — назначьте их другим.` : '') +
+          ' Позвать обратно можно той же ссылкой-приглашением.';
+        f.append(p);
+        const ok = acts(f, close, 'Исключить'); setTimeout(() => ok.focus());
+      });
+    }
+    menus.push(['[data-task-menu]', 'Действия с задачей', b => {
+      const name = (b.dataset.whoName || '').split(' ')[0];
+      const items = [{ label: 'Изменить', icon: I.pen, run: () => askEditTask(b) }];
+      if (b.dataset.remind === 'ok') items.push({ label: `Напомнить: ${name}`, icon: I.bell, run: () => post(`/steps/${b.dataset.taskMenu}/remind`) });
+      else if (b.dataset.remind === 'sent') items.push({ label: 'Напомнили сегодня', icon: I.bell, disabled: true });
+      else if (b.dataset.remind === 'off') items.push({ label: `${name}: напоминания выключены`, icon: I.bell, disabled: true });
+      items.push({ label: 'Удалить', icon: I.bin, danger: true, run: () => askDeleteTask(b) });
+      return items;
+    }]);
+    menus.push(['[data-member-menu]', 'Действия с участником', b => [
+      { label: 'Исключить из штаба', icon: I.out, danger: true, run: () => askRemoveMember(b) }]]);
+    applyFilters();
+  }
 
   // sending like a messenger: no page reload. The message flies from the field into the conversation at once,
   // the mentor «думает» in three dots, and when the server answers, the new part of the conversation rises in

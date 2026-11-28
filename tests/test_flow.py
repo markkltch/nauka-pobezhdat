@@ -85,7 +85,7 @@ def test_full_flow(client):
     sign_in(client, "deputy@example.ru", level="line", name="Анна Ковалёва")
     client.get(f"/join/{invite}")
     page = client.get(shtab_url).text
-    assert "Анна Ковалёва" in page and "2 человека" in page
+    assert "Анна Ковалёва" in page and "2 участника" in page
     r = client.post(f"/steps/{step.id}/toggle", follow_redirects=False)
     assert r.status_code == 303
 
@@ -310,3 +310,65 @@ def test_staff_panel(client, monkeypatch):
     sign_in(client, "boss@example.ru")
     page = client.get("/app").text
     assert "Владелец" in page and ">Управление<" not in page
+
+
+def test_shtab_board_manage_tasks(client, monkeypatch):
+    import datetime as dt
+    from app import mailer
+    from app.models import Member, Shtab, User
+    sent = []
+    monkeypatch.setattr(mailer, "send_letter", lambda to, letter: sent.append((to, letter.subject)))
+    sign_in(client, "head@example.ru", name="Глава Штабов")
+    r = client.post("/shtab/new", data={"name": "Склад"}, follow_redirects=False)
+    shtab_id = int(r.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/shtab/{shtab_id}").text
+    assert "Горит" in page and "Как работает штаб" in page and "Отправить в штаб" in page
+    with SessionLocal() as db:
+        shtab = db.get(Shtab, shtab_id)
+        invite = shtab.invite_token
+    sign_in(client, "worker@example.ru", name="Пётр Работник")
+    client.get(f"/join/{invite}")
+    sign_in(client, "head@example.ru", name="Глава Штабов")
+    with SessionLocal() as db:
+        worker = db.scalars(select(User).where(User.email == "worker@example.ru")).one()
+    yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()
+    r = client.post(f"/shtab/{shtab_id}/tasks", data={"text": "  Сдать   отчёт ", "assignee_id": worker.id, "due": yesterday}, follow_redirects=False)
+    assert r.headers["location"].endswith("?done=added")
+    page = client.get(f"/shtab/{shtab_id}").text
+    assert "Сдать отчёт" in page and "просрочено на 1 день" in page and "Горит задача" in page
+    with SessionLocal() as db:
+        step = db.scalars(select(Step).where(Step.shtab_id == shtab_id)).one()
+    # nudge: once a day, a letter from the head
+    r = client.post(f"/steps/{step.id}/remind", follow_redirects=False)
+    assert r.headers["location"].endswith("?done=reminded")
+    nudges = lambda: [x for x in sent if "напоминает" in x[1]]  # noqa: E731
+    assert nudges() == [("worker@example.ru", "Глава Штабов напоминает: Сдать отчёт")]
+    client.post(f"/steps/{step.id}/remind")
+    assert len(nudges()) == 1
+    assert "напомнили сегодня" in client.get(f"/shtab/{shtab_id}").text
+    # edit: text, new date, assignee
+    tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+    client.post(f"/steps/{step.id}/edit", data={"text": "Сдать квартальный отчёт", "assignee_id": 0, "due": tomorrow})
+    with SessionLocal() as db:
+        s = db.get(Step, step.id)
+        assert s.text == "Сдать квартальный отчёт" and s.assignee_id is None and s.due.isoformat() == tomorrow and s.reminded_at is None
+    # a plain member may tick but not delete what the head added
+    sign_in(client, "worker@example.ru", name="Пётр Работник")
+    assert client.post(f"/steps/{step.id}/delete").status_code == 403
+    assert client.post(f"/steps/{step.id}/toggle", follow_redirects=False).status_code == 303
+    sign_in(client, "head@example.ru", name="Глава Штабов")
+    r = client.post(f"/steps/{step.id}/delete", follow_redirects=False)
+    assert r.headers["location"].endswith("?done=deleted")
+    with SessionLocal() as db:
+        assert db.get(Step, step.id) is None
+    # the head removes a member; the member's open tasks lose their assignee but keep the name
+    client.post(f"/shtab/{shtab_id}/tasks", data={"text": "Проверить склад", "assignee_id": worker.id})
+    r = client.post(f"/shtab/{shtab_id}/members/{worker.id}/remove", follow_redirects=False)
+    assert r.headers["location"].endswith("?done=removed")
+    with SessionLocal() as db:
+        assert not db.scalars(select(Member).where(Member.shtab_id == shtab_id, Member.user_id == worker.id)).first()
+        t = db.scalars(select(Step).where(Step.shtab_id == shtab_id, Step.text == "Проверить склад")).one()
+        assert t.assignee_id is None and t.owner_name == "Пётр Работник"
+    assert "вне штаба" in client.get(f"/shtab/{shtab_id}").text
+    sign_in(client, "worker@example.ru", name="Пётр Работник")
+    assert client.get(f"/shtab/{shtab_id}").status_code == 404

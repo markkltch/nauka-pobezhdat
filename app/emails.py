@@ -224,6 +224,21 @@ def reminder(user_id: int, task: str, when: str, url: str, overdue: bool) -> Let
     return Letter(subject, text, _frame(subject, f"{task[:80]} — срок {when}", body, why, unsub), unsubscribe=unsub[1])
 
 
+def nudge(user_id: int, from_name: str, shtab_name: str, task: str, when: str, url: str, overdue: bool) -> Letter:
+    """The head of a shtab asks about one task right now (a button on the shtab's board)."""
+    subject = f"{from_name} напоминает: {task[:60]}"
+    kick = f"Штаб «{shtab_name}»"
+    unsub = ("Не присылать напоминания о задачах", unsub_url(user_id, "steps"))
+    body = (_kicker(kick) + _h1(f"{from_name} напоминает о задаче")
+            + _items("Задача", [(task, f"Срок: {when}" if when else "Без срока", url)], accent=CARMINE if overdue else INK)
+            + _p("Сделано — отметьте задачу в штабе, глава увидит сразу. Не успеваете — скажите об этом сейчас, а не в день срока.",
+                 size=15, top=12)
+            + _button("Открыть штаб", url))
+    why = f"Вы участник штаба «{shtab_name}» в «Наука побеждать · Штаб», и задача назначена вам."
+    text = (f"{from_name} напоминает о задаче.\n\nЗадача: {task}\nСрок: {when or 'без срока'}\n\nОткрыть: {url}\n" + _footer_text(why, unsub))
+    return Letter(subject, text, _frame(subject, f"{task[:80]}", body, why, unsub), unsubscribe=unsub[1])
+
+
 def morning(user_id: int, name: str, day: dt.date, sections: list[tuple[str, list[tuple[str, str, str]]]],
             review: list[tuple[str, str]], learn_line: tuple[str, str] | None, subject: str) -> Letter:
     base = get_settings().base_url.rstrip("/")
