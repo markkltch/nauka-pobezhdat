@@ -135,6 +135,35 @@
   @media (max-width: 639px) { .d-win__body { grid-template-columns: 1fr; } .inbox { display: none; } .hero__window .d-chat { font-size: 13px; padding: 12px 14px; } .hero__window .d-msg--bot small, .hero__window .d-tool, .hero__window .acts, .hero__window .d-win__bar .sp ~ span { display: none; } }
   .hero__window .loop-pause:focus-visible { outline-color: #fffdf8; }
 
+  /* partners: a thin band between two hairlines under the first screen; the marks run slowly right to left
+     (four copies of the set, the track moves by half its width, so the loop has no seam), stop under the pointer,
+     stand still for those who ask for less motion */
+  main > section.partners-band.partners-band { padding: 0 !important; }
+  .pband { display: flex; align-items: center; gap: 32px; padding: 26px 0; border-block: 1px solid rgb(18 32 26 / .12); }
+  .pband__label { flex: none; margin: 0; padding-right: 32px; border-right: 1px solid rgb(18 32 26 / .12); font-size: 14px; line-height: 1.35; color: var(--p-muted); }
+  .pband__view { flex: 1; min-width: 0; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent); }
+  .pband__track { display: flex; align-items: center; width: max-content; margin: 0; padding: 0; list-style: none; animation: pband 36s linear infinite; }
+  .pband__track li { flex: none; display: flex; align-items: center; height: 76px; padding: 0 56px; }
+  .pband__track img { display: block; width: auto; opacity: .88; }
+  .pband__ogi { height: 42px; } .pband__sds { height: 70px; } .pband__ave { height: 70px; }
+  .pband__view:hover .pband__track { animation-play-state: paused; }
+  @keyframes pband { to { transform: translate3d(-50%, 0, 0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .pband__track { animation: none; width: auto; justify-content: center; } .pband__track [aria-hidden="true"] { display: none; }
+    .pband__view { -webkit-mask-image: none; mask-image: none; }
+  }
+  @media (max-width: 639px) {
+    .pband { flex-direction: column; align-items: stretch; gap: 14px; padding: 18px 0 14px; }
+    .pband__label { padding: 0; border: 0; font-size: 13px; } .pband__label br { display: none; }
+    .pband__track li { height: 64px; padding: 0 32px; }
+    .pband__ogi { height: 34px; } .pband__sds { height: 58px; } .pband__ave { height: 58px; }
+  }
+  /* the voice card: Suvorov himself in the mentor's circle (a picture, no blurred layers: those showed as a square on phones) */
+  .ui-voice__orb--face { width: 88px; height: 88px; background: #f4eee2; }
+  .ui-voice__orb--face::before, .ui-voice__orb--face::after { display: none; }
+  .ui-voice__orb--face img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
   /* the hero with Suvorov: the words on the left, his portrait on the right, the product window still rising below */
   .hero--centred .hero__duo { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: var(--gutter); align-items: center; }
   .hero--centred .hero__duo .hero__c { justify-items: start; text-align: left; margin-inline: 0; max-width: none; }
@@ -276,7 +305,7 @@
 
   /* the steps: one panel height for the group */
   #how .panel { --p-h: 336px; }
-  @media (max-width: 639px) { #how .panel { --p-h: 200px; } }
+  @media (max-width: 639px) { #how .panel { --p-h: 200px; } #how .card:first-child .panel { --p-h: 290px; } }
   /* the client's imperial carmine as the page's one lit ground (UI frames, the hero window, the closing slab) */
   html[data-ground="sand"] { --ground-bg: #a8142f; --ground-surface: #b92a40; --ground-ink: #fffdf8; --ground-muted: #f3d9d3; --ground-accent: #e9cf97; }
   html .footer.closing.footer--statement { --action: #f4eee2; --action-ink: #a8142f; }
@@ -458,6 +487,30 @@
     </div></div>
   </section>
 
+  <section class="partners-band" aria-label="Партнёры проекта">
+    <div class="wrap">
+      <div class="pband">
+        <p class="pband__label">Партнёры <br>проекта</p>
+        <div class="pband__view">
+          <ul class="pband__track">
+            <li><img class="pband__ogi" src="/static/landing/partners/ogi.svg" width="426" height="129" alt="Открытый гуманитарный институт" loading="lazy" decoding="async"></li>
+            <li><img class="pband__sds" src="/static/landing/partners/sds.svg" width="160" height="160" alt="Суворовский деловой союз" loading="lazy" decoding="async"></li>
+            <li><img class="pband__ave" src="/static/landing/partners/avelora.svg" width="1975" height="1442" alt="Avelora Travel" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ogi" src="/static/landing/partners/ogi.svg" width="426" height="129" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__sds" src="/static/landing/partners/sds.svg" width="160" height="160" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ave" src="/static/landing/partners/avelora.svg" width="1975" height="1442" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ogi" src="/static/landing/partners/ogi.svg" width="426" height="129" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__sds" src="/static/landing/partners/sds.svg" width="160" height="160" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ave" src="/static/landing/partners/avelora.svg" width="1975" height="1442" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ogi" src="/static/landing/partners/ogi.svg" width="426" height="129" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__sds" src="/static/landing/partners/sds.svg" width="160" height="160" alt="" loading="lazy" decoding="async"></li>
+            <li aria-hidden="true"><img class="pband__ave" src="/static/landing/partners/avelora.svg" width="1975" height="1442" alt="" loading="lazy" decoding="async"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="plan" aria-labelledby="plan-h">
     <div class="wrap">
       <div class="grid">
@@ -548,7 +601,7 @@
             <div class="stage stage--fade-b"><div class="at-rise to-edge fit" style="--fit-max:264px;--ay:32px">
               <div class="ui ui-panel ui-voice" data-ui="voice">
                 <div class="ui-voice__top"><span class="ui-chip ui-chip--ink">Запись</span><span class="ui-spacer"></span><span class="ui-voice__time" data-voice-time>00:41</span></div>
-                <div class="ui-voice__orb" data-voice-orb></div>
+                <div class="ui-voice__orb ui-voice__orb--face" data-voice-orb><img src="/static/landing/suvorov-face.webp" width="384" height="384" alt="" loading="lazy"></div>
                 <div class="ui-voice__who"><span class="ui-voice__name">Наставник</span><span class="ui-voice__with">слушает</span></div>
                 <div class="ui-voice__cap" data-voice-cap>Двое в смене опаздывают, остальные ропщут.</div>
                 <div class="ui-voice__bar">
