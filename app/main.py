@@ -7,6 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -59,6 +60,8 @@ def _plural(n: int, one: str, few: str, many: str) -> str:
 
 
 templates.env.filters["ru_date"] = _ru_date
+# times are stored in UTC; people read them in Moscow time
+templates.env.filters["msk"] = lambda d: d.replace(tzinfo=dt.timezone.utc).astimezone(ZoneInfo("Europe/Moscow")) if d else d
 templates.env.filters["plural"] = _plural
 templates.env.filters["initials"] = lambda name: "".join(w[0] for w in (name or "?").split()[:2]).upper() or "?"
 templates.env.filters["q"] = lambda t: t if str(t).startswith("«") else f"«{t}»"

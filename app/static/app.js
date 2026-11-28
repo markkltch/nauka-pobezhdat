@@ -237,6 +237,130 @@
   addEventListener('resize', () => closePop());
   document.querySelector('.side')?.addEventListener('scroll', () => closePop(), { passive: true });
 
+  // sending like a messenger: no page reload. The message flies from the field into the conversation at once,
+  // the mentor «думает» in three dots, and when the server answers, the new part of the conversation rises in
+  // place of the dots. The field keeps its focus, so a phone keeps its keyboard. Anything unexpected (a sign-in
+  // page, the month's limit, no conversation on the answer page) falls back to an ordinary page load.
+  const composer = document.querySelector('form.composer');
+  if (composer && window.fetch && window.DOMParser) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ta = composer.querySelector('textarea'), fileIn = composer.querySelector('input[type=file]');
+    const sendBtn = composer.querySelector('.composer__send');
+    let sending = false;
+    // a tap on «отправить» must not take the focus from the field: the phone's keyboard stays open
+    sendBtn?.addEventListener('pointerdown', e => { if (document.activeElement === ta) e.preventDefault(); });
+    const hhmm = () => new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' });
+    const bubble = (text, file) => {
+      const m = el('div', 'msg msg--me');
+      if (file) {
+        const p = el('p', 'msg__file', '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.8h5.2L12 4.6v9.6H4z"/><path d="M9 1.8v3h3"/></svg><span><b></b><small>Файл</small></span>');
+        p.querySelector('b').textContent = file; m.append(p);
+      } else { const p = el('p'); p.textContent = text; const t = el('time'); t.textContent = hhmm(); m.append(p, t); }
+      return m;
+    };
+    const typing = () => {
+      const m = el('div', 'msg msg--bot msg--typing', '<span class="av av--red" aria-hidden="true"><span class="mark" data-mark="arc"></span></span><div class="bot"><p class="typing" role="status"><span class="typing__dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Наставник думает</span></p></div>');
+      setTimeout(() => { const s = m.querySelector('.typing > span:last-child'); if (s) s.textContent = 'Наставник думает — обычно 10–30 секунд'; }, 7000);
+      return m;
+    };
+    // the message leaves the field: from where its text stood in the field to its place in the conversation
+    function fly(m, from) {
+      if (reduce) return;
+      const p = m.querySelector('p'); if (!p) return;
+      const to = p.getBoundingClientRect(), cs = getComputedStyle(p);
+      const dx = from.x - (to.left + parseFloat(cs.paddingLeft)), dy = from.y - (to.top + parseFloat(cs.paddingTop));
+      p.animate([{ transform: `translate(${dx}px, ${dy}px)`, backgroundColor: 'rgb(233 224 207 / 0)' },
+                 { transform: 'none', backgroundColor: 'rgb(233 224 207 / 1)' }],
+                { duration: 420, easing: 'cubic-bezier(.2,.9,.25,1)' });
+      m.querySelector('time')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 260, fill: 'backwards' });
+    }
+    const toBottom = () => scrollTo({ top: document.documentElement.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
+    // the answer page replaces the head, the side list, the conversation and the field's settings — not the field
+    // itself, so the text, the voice button and the focus stay as they are
+    function swap(doc) {
+      const head = document.querySelector('.talk__head'), nhead = doc.querySelector('.talk__head');
+      if (head && nhead) {
+        [...head.children].forEach(c => { if (!c.matches('.talk__menu')) c.remove(); });
+        [...nhead.children].forEach(c => { if (!c.matches('.talk__menu')) head.append(c); });
+      }
+      const side = document.querySelector('.side');
+      const oldList = side?.querySelector('.list, .side__empty'), newList = doc.querySelector('.side .list, .side .side__empty');
+      if (oldList && newList) oldList.replaceWith(newList);
+      const oldLabel = side?.querySelector('.side__label'), newLabel = doc.querySelector('.side .side__label');
+      if (oldLabel && newLabel) oldLabel.replaceWith(newLabel);
+      const feed = document.querySelector('.feed'), nfeed = doc.querySelector('.feed');
+      feed.replaceChildren(...nfeed.childNodes);
+      const nform = doc.querySelector('form.composer');
+      if (!nform) composer.remove();
+      else {
+        composer.setAttribute('action', nform.getAttribute('action'));
+        ta.placeholder = nform.querySelector('textarea').placeholder;
+        const l = composer.querySelector('label[for="say"]'), nl = nform.querySelector('label[for="say"]');
+        if (l && nl) l.textContent = nl.textContent;
+      }
+      document.title = doc.title;
+      return feed;
+    }
+    composer.addEventListener('submit', async e => {
+      e.preventDefault(); e.stopPropagation();          // not the page-locking «busy» of an ordinary form
+      if (sending) return;
+      const text = ta.value.trim(), file = fileIn?.files[0];
+      if (!text && !file) return;
+      sending = true;
+      const body = new FormData(composer);
+      const feed = document.querySelector('.feed'), end = feed.querySelector('#end');
+      const r = ta.getBoundingClientRect(), tcs = getComputedStyle(ta);
+      const from = { x: r.left + parseFloat(tcs.paddingLeft), y: r.top + parseFloat(tcs.paddingTop) };
+      // the start screen of a new situation steps aside for the conversation
+      const start = feed.querySelector('.start');
+      if (start) { if (!reduce) await start.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140 }).finished; start.remove(); }
+      const mine = [];
+      if (file) mine.push(bubble('', file.name));
+      if (text) mine.push(bubble(text));
+      const dots = typing();
+      mine.concat(dots).forEach(n => end ? end.before(n) : feed.append(n));
+      ta.value = ''; ta.dispatchEvent(new Event('input'));
+      if (file) { fileIn.value = ''; fileIn.dispatchEvent(new Event('change')); }
+      composer.classList.add('is-waiting');
+      mine.forEach(m => fly(m, from));
+      toBottom();
+      try {
+        const res = await fetch(composer.action, { method: 'POST', body, credentials: 'same-origin' });
+        const url = new URL(res.url), doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        if (!res.ok || !url.pathname.startsWith('/app') || url.searchParams.has('limit') || !doc.querySelector('.feed')) {
+          location.assign(res.url); return;
+        }
+        const failed = url.searchParams.has('err') || url.searchParams.has('ferr');
+        if (url.pathname !== location.pathname) history.pushState(null, '', url.pathname);
+        const before = document.querySelector('.talk__head')?.getBoundingClientRect().height || 0;
+        const f = swap(doc);
+        if (failed) {
+          // the message was not taken: give it back to the field, show what the page says
+          ta.value = text; ta.dispatchEvent(new Event('input'));
+          if (file && window.DataTransfer) { const dt = new DataTransfer(); dt.items.add(file); fileIn.files = dt.files; fileIn.dispatchEvent(new Event('change')); }
+          const note = [...f.querySelectorAll('.error, .notice')].pop();
+          note?.classList.add('is-arriving'); note?.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+        } else {
+          // what is new is everything after my last message: it rises in place of the dots
+          const me = [...f.querySelectorAll('.msg--me')].pop();
+          const fresh = []; for (let n = me?.nextElementSibling; n; n = n.nextElementSibling) if (n.id !== 'end') fresh.push(n);
+          fresh.forEach((n, i) => { n.classList.add('is-arriving'); n.style.animationDelay = `${i * 70}ms`; });
+          // a short answer: to the end; a long one (a plan): its beginning under the head
+          const top = me ? me.getBoundingClientRect().top + scrollY - before - 16 : 0;
+          const max = document.documentElement.scrollHeight - innerHeight;
+          scrollTo({ top: Math.min(Math.max(top, 0), max), behavior: reduce ? 'auto' : 'smooth' });
+        }
+      } catch {
+        dots.remove(); mine.forEach(m => m.remove());
+        ta.value = text; ta.dispatchEvent(new Event('input'));
+        alertInline(composer, 'Нет связи с сервером. Сообщение не отправлено — попробуйте ещё раз.');
+      } finally {
+        sending = false; composer.classList.remove('is-waiting');
+      }
+    });
+    addEventListener('popstate', () => location.reload());
+  }
+
   // «Разбор удалён»: say it once, then take the mark out of the address
   const flash = document.querySelector('[data-flash]');
   if (flash) {

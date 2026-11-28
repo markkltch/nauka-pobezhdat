@@ -8,7 +8,7 @@
     {% for s in situations %}
     <li><a class="item {% if current and current.id == s.id %}is-on{% endif %}" href="/app/{{ s.id }}" {% if current and current.id == s.id %}aria-current="page"{% endif %}>
       <b>{{ s.title }}</b>
-      <span>{% if s.review == 'done' %}Итог подведён{% elif s.stage == 'follow' %}План готов{% elif s.stage == 'plan' %}Ждёт ваш ответ{% else %}Разбор{% endif %} · {{ s.updated_at.date()|ru_date }}</span>
+      <span>{% if s.review == 'done' %}Итог подведён{% elif s.stage == 'follow' %}План готов{% elif s.stage == 'plan' %}Ждёт ваш ответ{% else %}Разбор{% endif %} · {{ (s.updated_at|msk).date()|ru_date }}</span>
       {% if s.stage == 'plan' %}<i class="dot" aria-label="Ждёт ответа"></i>{% endif %}
     </a>{{ sit_more(s, "item__more") }}</li>
     {% endfor %}
