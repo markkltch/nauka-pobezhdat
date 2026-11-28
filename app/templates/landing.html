@@ -136,6 +136,30 @@
   @media (max-width: 639px) { .d-win__body { grid-template-columns: 1fr; } .inbox { display: none; } .hero__window .d-chat { font-size: 13px; padding: 12px 14px; } .hero__window .d-msg--bot small, .hero__window .d-tool, .hero__window .acts, .hero__window .d-win__bar .sp ~ span { display: none; } }
   .hero__window .loop-pause:focus-visible { outline-color: #fffdf8; }
 
+  /* the hero with Suvorov: the words on the left, his portrait on the right, the product window still rising below */
+  .hero--centred .hero__duo { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: var(--gutter); align-items: center; }
+  .hero--centred .hero__duo .hero__c { justify-items: start; text-align: left; margin-inline: 0; max-width: none; }
+  .hero--centred .hero__duo h1 { max-width: 13ch; }
+  .hero--centred .hero__duo .btn-row { justify-content: flex-start; }
+  .hero__suv { position: relative; margin: 0; justify-self: end; width: min(100%, 470px); aspect-ratio: 1 / .97; }
+  .hero__suv img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 72%, transparent 99%), linear-gradient(to right, transparent, #000 22%, #000 84%, transparent);
+    -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 72%, transparent 99%), linear-gradient(to right, transparent, #000 22%, #000 84%, transparent); mask-composite: intersect; }
+  .hero__quote { position: absolute; left: -16%; bottom: 9%; width: min(270px, 62%); padding: 14px 16px 13px 18px; border-radius: 14px;
+    background: #fffdf8; box-shadow: 0 0 0 1px rgb(18 32 26 / .06), 0 22px 44px -22px rgb(18 32 26 / .45); border-left: 3px solid var(--p-accent); }
+  .hero__quote q { display: block; font: 400 15px/1.4 var(--font-text); color: var(--p-ink); quotes: "«" "»"; }
+  .hero__quote span { display: block; margin-top: 6px; font-size: 12.5px; letter-spacing: .02em; color: var(--p-muted); }
+  @media (max-width: 899px) {
+    .hero--centred .hero__duo { grid-template-columns: minmax(0, 1fr); row-gap: var(--s-4); }
+    .hero--centred .hero__duo .hero__c { justify-items: center; text-align: center; margin-inline: auto; }
+    .hero--centred .hero__duo .btn-row { justify-content: center; }
+    .hero--centred .hero__duo h1 { max-width: 16ch; }
+    .hero__suv { justify-self: center; width: min(100%, 320px); }
+    .hero__quote { left: -6%; bottom: 6%; width: 58%; }
+  }
+  @media (max-width: 639px) { .hero h1 { hyphens: manual; } .hero__suv { width: min(86%, 300px); aspect-ratio: 1 / .92; } .hero--centred .hero__duo + .hero__window { margin-top: var(--s-3); }
+    .hero__quote { left: -8%; bottom: 5%; width: 56%; padding: 10px 12px 10px 14px; border-radius: 12px; } .hero__quote span { margin-top: 4px; font-size: 12px; } .hero__quote q { font-size: 13.5px; } }
+
   /* app-frame (sections-library.md, app-frame: the whole recipe) */
   .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
   .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
@@ -391,12 +415,19 @@
 <main id="top">
   <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text">
+      <div class="hero__duo">
       <div class="hero__c">
         <a class="pill" href="#method"><span>По методу А. В. Суворова</span></a>
-        <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ-наставник для руководителей</h1>
+        <h1 id="hero-h" aria-label="ИИ-наставник для руководителей"><span class="mark" data-mark="arc" aria-hidden="true"></span> ИИ‑наставник для руководителей</h1>
         <p class="hero__lead">Опишите ситуацию в команде. Наставник задаст два-три вопроса и даст план: что сделать, кому и к какому сроку. {{ s.price_per_seat_rub|rub }} в месяц.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/register">Начать бесплатно</a><a class="btn btn--secondary" href="#price">Посмотреть цену</a></div>
       </div>
+      <figure class="hero__suv">
+        <img src="/static/landing/suvorov.webp" srcset="/static/landing/suvorov-sm.webp 561w, /static/landing/suvorov.webp 1122w" sizes="(max-width: 899px) 340px, 480px" width="1122" height="1402" alt="Портрет полководца Александра Васильевича Суворова" fetchpriority="high">
+        <figcaption class="hero__quote"><q>Побеждай противника сначала мыслью, а потом делом.</q><span>А. В. Суворов</span></figcaption>
+      </figure>
+      </div>
+      
       <div class="hero__window" data-ui-pause-host data-fx="painterly-landscape" data-fx-seed="7">
         <p class="sr-only">Пример: наставник отвечает руководителю планом из трёх шагов на 21 день.</p>
         <div class="ly-piece d-win">
