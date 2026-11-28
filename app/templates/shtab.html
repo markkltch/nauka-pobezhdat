@@ -100,16 +100,20 @@
     </div>
 
     <form class="addt" method="post" action="/shtab/{{ shtab.id }}/tasks" data-soft data-add>
-      <svg class="addt__plus" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
-      <label class="sr-only" for="t-text">Новая задача</label>
-      <input id="t-text" name="text" placeholder="Новая задача — что сделать" required maxlength="500" autocomplete="off">
-      <div class="addt__more">
-        <label class="sr-only" for="t-who">Исполнитель</label>
-        <select id="t-who" name="assignee_id"><option value="0">Исполнитель</option>{% for m in shtab.members %}<option value="{{ m.user.id }}">{{ m.user.display_name }}{% if m.user.id == user.id %} (вы){% endif %}</option>{% endfor %}</select>
-        <label class="sr-only" for="t-due">Срок</label>
-        <input id="t-due" name="due" type="date" min="{{ today.isoformat() }}">
-        <button class="btn btn--primary" type="submit">Добавить</button>
+      <div class="addt__head"><h2>Новая задача</h2><p>Что сделать, кто и к какому сроку — исполнителю придёт напоминание накануне.</p></div>
+      <label class="fld fld--grow" for="t-text"><span class="sr-only">Что сделать</span>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+        <input id="t-text" name="text" placeholder="Например, собрать смену на планёрку" required maxlength="500" autocomplete="off">
+      </label>
+      <div class="addt__opts">
+        <label class="fld fld--who" for="t-who"><span class="fld__cap">Кто</span>
+          <select id="t-who" name="assignee_id"><option value="0">Не назначен</option>{% for m in shtab.members %}<option value="{{ m.user.id }}">{{ m.user.display_name }}{% if m.user.id == user.id %} (вы){% endif %}</option>{% endfor %}</select>
+        </label>
+        <label class="fld fld--due" for="t-due"><span class="fld__cap">Срок</span>
+          <input id="t-due" name="due" type="date" min="{{ today.isoformat() }}">
+        </label>
       </div>
+      <button class="btn btn--primary addt__go" type="submit"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Добавить</button>
     </form>
 
     {% for op in b.ops %}
