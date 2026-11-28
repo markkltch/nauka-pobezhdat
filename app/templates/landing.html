@@ -41,7 +41,7 @@
 }
   /* FAQ: an ink panel, a sticky side, an accordion with numbered rows */
   :root { interpolate-size: allow-keywords; }
-  #faq { padding: 48px 0 112px !important; }
+  #faq { padding: var(--sec-pad) 0 !important; }
   .qa { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 64px; padding: 72px; border-radius: 32px; background: #12201a; color: #f4eee2; position: relative; overflow: hidden; isolation: isolate; }
   .qa::before { content: ""; position: absolute; inset: -40% auto auto -20%; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, rgb(168 20 47 / .55), transparent 70%); filter: blur(20px); z-index: -1; }
   .qa::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgb(244 238 226 / .07) 1px, transparent 1px); background-size: 22px 22px; mask-image: linear-gradient(120deg, #000, transparent 55%); z-index: -1; pointer-events: none; }
@@ -76,7 +76,6 @@
   @media (prefers-reduced-motion: reduce) { .qa__item::details-content, .qa__icon, .qa__icon::before, .qa__icon::after { transition: none; } }
   @media (max-width: 1023px) { .qa { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 48px 40px; } .qa__side { position: static; } }
   @media (max-width: 639px) {
-    #faq { padding: 24px 0 72px !important; }
     .qa { padding: 36px 20px 20px; border-radius: 24px; }
     .qa::before { filter: none; }
     .qa__item summary { grid-template-columns: 32px 1fr 28px; padding: 20px 0; }
@@ -284,18 +283,25 @@
   .hero h1 .mark { width: .8em; height: .8em; vertical-align: -.06em; color: var(--action); }
   /* the plan's sources line in the chat: Russian words are longer */
   .ui-chat__src { white-space: nowrap; }
-  /* sections sized by their content, not by the screen: the gaps the one-screen rhythm left are gone */
-  main > section:not(.hero) { height: auto !important; min-height: 0 !important; padding: 112px 0 !important; }
+  /* sections sized by their content, not by the screen; one even gap between every two blocks:
+     --sec-pad above and below each section, so 160px between blocks on a computer, 128 on a tablet, 112 on a phone */
+  :root { --sec-pad: 80px; }
+  @media (max-width: 1023px) { :root { --sec-pad: 64px; } }
+  @media (max-width: 639px) { :root { --sec-pad: 56px; } }
+  main > section:not(.hero) { height: auto !important; min-height: 0 !important; padding: var(--sec-pad) 0 !important; }
+  /* the hero too: as tall as its content (on a short screen the product window used to spill over the next block) */
+  main > section.hero { height: auto !important; min-height: 0 !important; padding-bottom: var(--sec-pad) !important; }
+  main > section.hero > .wrap { height: auto !important; }
+  .hero--centred .hero__window { flex: none !important; height: 300px; min-height: 0 !important; }
+  @media (max-width: 639px) { .hero--centred .hero__window { height: 260px; } }
   main > section:not(.hero) > .wrap { height: auto !important; }
-  main > section.statement { padding: 72px 0 !important; }
-  #plan { padding-top: 120px !important; }
   main > section:not(.hero) > .wrap > .fill { flex: none !important; }
   #plan .app.fill { height: 560px; }
   #shtab .grid.fill { align-items: center; }
   #shtab .frame--fill { height: 460px; min-height: 0; flex: none !important; width: 100%; align-self: stretch; }
   /* white UI panels on the carmine frame keep dark ink */
   .frame--lit .ui { --fx-bg: #ffffff; --fx-surface: #f4eee2; --fx-ink: #12201a; --fx-muted: #5a5a50; --fx-accent: #a8142f; --fx-accent-ink: #fffdf8; color: #12201a; }
-  @media (max-width: 639px) { main > section:not(.hero) { padding: 72px 0 !important; } main > section.statement { padding: 48px 0 !important; } #plan .app.fill { height: 460px; } #shtab .frame--fill { height: 380px; } }
+  @media (max-width: 639px) { #plan .app.fill { height: 460px; } #shtab .frame--fill { height: 380px; } }
 
   /* tariffs */
   .price-head { max-width: 760px; }
@@ -339,7 +345,7 @@
   .stepper { height: 52px; }
   .stepper__btn { width: 44px; height: 44px; touch-action: manipulation; }
   .qa__mail { min-height: 44px; align-items: center; }
-  footer.closing { height: auto !important; min-height: 0 !important; padding-top: 112px !important; padding-bottom: 40px !important; }
+  footer.closing { height: auto !important; min-height: 0 !important; padding-top: var(--sec-pad) !important; padding-bottom: 40px !important; }
   footer.closing > .wrap { display: flex; flex-direction: column; gap: 96px; height: auto !important; }
   footer.closing .closing__links { margin-top: 0 !important; }
   .footer a, .closing__links a { display: inline-flex; align-items: center; min-height: 32px; }
@@ -349,7 +355,6 @@
     .tcmp th, .tcmp td { padding: 12px 4px; }
     .tcmp tbody th { width: 52%; font-size: 14px; line-height: 1.4; }
     .tcmp thead th { font-size: 12.5px; }
-    footer.closing { padding-top: 72px !important; }
     footer.closing > .wrap { gap: 56px; }
     .footer a, .closing__links a { min-height: 44px; }
   }
